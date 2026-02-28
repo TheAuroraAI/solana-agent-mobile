@@ -12,7 +12,7 @@ Aurora isn't just a chatbot with a wallet view. It **autonomously**:
 3. **Executes** transactions via Phantom signing — you tap Approve, Aurora handles the rest
 4. **Streams** real-time AI analysis to your mobile screen as it processes
 
-The agent runs on Claude Sonnet 4.6 (Anthropic's latest model) with full access to your real-time wallet state via Solana web3.js.
+The agent runs on Claude Haiku 4.5 (fast inference) for action generation and Claude Sonnet 4.6 for conversational analysis, with full access to your real-time wallet state via Solana web3.js.
 
 ## 📱 Mobile-First Design
 
@@ -91,7 +91,7 @@ API Routes
 
 ## 🌐 Live Demo
 
-[aurora-agent.vercel.app](https://aurora-agent.vercel.app) *(deploying to Vercel)*
+[solana-agent-mobile.vercel.app](https://solana-agent-mobile.vercel.app)
 
 ## 🏆 Hackathon Submission
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { SystemProgram, Transaction, LAMPORTS_PER_SOL, PublicKey, Connection } from '@solana/web3.js';
 import {
-  Zap, CheckCircle, XCircle, Clock, Send, AlertTriangle, ChevronDown, ChevronUp
+  Zap, CheckCircle, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { getWalletState } from '@/lib/solana';
 
 type ActionStatus = 'pending' | 'approved' | 'rejected' | 'executed';
 
@@ -23,48 +24,21 @@ interface AgentAction {
     amount?: number;
   };
   status: ActionStatus;
-  createdAt: Date;
+  createdAt: string | Date;
 }
 
-const DEMO_ACTIONS: AgentAction[] = [
+const FALLBACK_ACTIONS: AgentAction[] = [
   {
     id: '1',
     type: 'analysis',
-    title: 'Portfolio Rebalance Opportunity',
-    description: 'Aurora detected your portfolio is 100% SOL. Consider diversifying 20% into stablecoins for reduced volatility.',
+    title: 'Connect wallet to get AI actions',
+    description: 'Aurora generates personalized on-chain actions based on your wallet state.',
     details: {
-      reasoning: 'Single-asset portfolios have high volatility. Allocating 20% to USDC would reduce portfolio risk by approximately 30% while maintaining SOL upside exposure.',
+      reasoning: 'Connect your Phantom wallet so Aurora can analyze your SOL balance, token holdings, and transaction history to generate relevant action proposals.',
       risk: 'low',
     },
     status: 'pending',
-    createdAt: new Date(Date.now() - 1000 * 60 * 5),
-  },
-  {
-    id: '2',
-    type: 'alert',
-    title: 'SOL Price Alert Setup',
-    description: 'Set an automatic alert when SOL price drops below $130 to DCA into position.',
-    details: {
-      reasoning: 'Based on your portfolio size, accumulating more SOL at $130 would be a strategic entry point supported by the 200-day moving average.',
-      risk: 'low',
-    },
-    status: 'pending',
-    createdAt: new Date(Date.now() - 1000 * 60 * 12),
-  },
-  {
-    id: '3',
-    type: 'transfer',
-    title: 'Test Transfer (0.001 SOL)',
-    description: 'Execute a test transfer to verify the wallet signing flow works correctly.',
-    details: {
-      reasoning: 'Verifying on-chain transaction capability. This is a micro-transaction to confirm Phantom signing integration works end-to-end.',
-      risk: 'low',
-      estimatedGas: '~0.000005 SOL',
-      recipient: 'GpXHXs5KfzfXbNKcMLNbAMsJsgPsBE7y5GtwVoiuxYvH',
-      amount: 0.001,
-    },
-    status: 'pending',
-    createdAt: new Date(Date.now() - 1000 * 60 * 2),
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -174,17 +148,47 @@ function ActionCard({ action, onApprove, onReject }: {
 }
 
 export function ActionsView() {
-  const { publicKey, sendTransaction } = useWallet();
-  const [actions, setActions] = useState<AgentAction[]>(DEMO_ACTIONS);
+  const { publicKey, sendTransaction, connected } = useWallet();
+  const [actions, setActions] = useState<AgentAction[]>(FALLBACK_ACTIONS);
   const [executing, setExecuting] = useState<string | null>(null);
   const [txResult, setTxResult] = useState<{ success: boolean; sig?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+
+  const generateActions = useCallback(async () => {
+    if (!publicKey || !connected) return;
+    setLoading(true);
+    try {
+      const walletState = await getWalletState(publicKey.toString(), 'devnet');
+      const res = await fetch('/api/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletState }),
+      });
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      if (data.actions?.length > 0) {
+        setActions(data.actions);
+        setAiGenerated(true);
+      }
+    } catch (err) {
+      console.error('Failed to generate actions:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, connected]);
+
+  useEffect(() => {
+    if (connected && publicKey && !aiGenerated) {
+      generateActions();
+    }
+  }, [connected, publicKey, aiGenerated, generateActions]);
 
   const handleApprove = async (id: string) => {
     const action = actions.find((a) => a.id === id);
     if (!action) return;
 
     if (action.type === 'transfer' && action.details.recipient && action.details.amount) {
-      // Execute on-chain transfer
       setExecuting(id);
       try {
         const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
@@ -204,14 +208,10 @@ export function ActionsView() {
       } catch (err) {
         console.error('Transaction failed:', err);
         setTxResult({ success: false });
-        setActions((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: 'pending' } : a))
-        );
       } finally {
         setExecuting(null);
       }
     } else {
-      // Mark as approved (no on-chain action)
       setActions((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: 'approved' } : a))
       );
@@ -224,6 +224,12 @@ export function ActionsView() {
     );
   };
 
+  const handleRefresh = () => {
+    setAiGenerated(false);
+    setActions(FALLBACK_ACTIONS);
+    generateActions();
+  };
+
   const pendingCount = actions.filter((a) => a.status === 'pending').length;
 
   return (
@@ -233,13 +239,38 @@ export function ActionsView() {
         <div className="w-9 h-9 rounded-xl bg-yellow-500/20 flex items-center justify-center">
           <Zap className="w-4 h-4 text-yellow-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-white font-semibold">Pending Actions</h1>
           <p className="text-gray-400 text-xs">
-            {pendingCount} action{pendingCount !== 1 ? 's' : ''} waiting for approval
+            {loading
+              ? 'Aurora is analyzing your wallet...'
+              : aiGenerated
+              ? `${pendingCount} AI-generated action${pendingCount !== 1 ? 's' : ''} • personalized for your wallet`
+              : `${pendingCount} action${pendingCount !== 1 ? 's' : ''} waiting for approval`}
           </p>
         </div>
+        {connected && !loading && (
+          <button
+            onClick={handleRefresh}
+            className="w-9 h-9 rounded-xl bg-gray-800/50 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            title="Refresh actions"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {loading && (
+        <div className="glass rounded-2xl p-6 mb-4 flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-4 h-4 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
+          </div>
+          <div>
+            <p className="text-white text-sm font-medium">Aurora is thinking...</p>
+            <p className="text-gray-400 text-xs mt-0.5">Analyzing your wallet state with AI</p>
+          </div>
+        </div>
+      )}
 
       {txResult && (
         <div className={clsx(
@@ -273,22 +304,32 @@ export function ActionsView() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {actions.map((action) => (
-          <ActionCard
-            key={action.id}
-            action={executing === action.id ? { ...action, status: 'approved' } : action}
-            onApprove={handleApprove}
-            onReject={handleReject}
-          />
-        ))}
-      </div>
+      {!loading && (
+        <div className="space-y-3">
+          {actions.map((action) => (
+            <ActionCard
+              key={action.id}
+              action={executing === action.id ? { ...action, status: 'approved' } : action}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          ))}
+        </div>
+      )}
 
-      {actions.every((a) => a.status !== 'pending') && (
+      {!loading && actions.every((a) => a.status !== 'pending') && (
         <div className="text-center py-8">
           <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
           <p className="text-white font-semibold">All caught up!</p>
           <p className="text-gray-400 text-sm mt-1">Aurora will notify you when new actions are ready.</p>
+          {connected && (
+            <button
+              onClick={handleRefresh}
+              className="mt-4 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition-colors"
+            >
+              Generate new actions
+            </button>
+          )}
         </div>
       )}
     </div>
