@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useSearchParams } from 'next/navigation';
 import { SystemProgram, Transaction, LAMPORTS_PER_SOL, PublicKey, Connection } from '@solana/web3.js';
 import {
   Zap, CheckCircle, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, RefreshCw
@@ -36,6 +37,48 @@ const FALLBACK_ACTIONS: AgentAction[] = [
     details: {
       reasoning: 'Connect your Phantom wallet so Aurora can analyze your SOL balance, token holdings, and transaction history to generate relevant action proposals.',
       risk: 'low',
+    },
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+const DEMO_ACTIONS: AgentAction[] = [
+  {
+    id: 'demo-1',
+    type: 'analysis',
+    title: 'Portfolio diversification opportunity',
+    description: 'Your SOL allocation (97%) is heavily concentrated. Consider diversifying into liquid staking tokens.',
+    details: {
+      reasoning: 'With 5.51 SOL and only $35 in stablecoins, you\'re highly exposed to SOL price volatility. mSOL or jitoSOL would give you staking yield (~7% APY) while maintaining SOL exposure.',
+      risk: 'low',
+    },
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-2',
+    type: 'alert',
+    title: 'Low stablecoin reserve',
+    description: 'Only $35 USDC/USDT for gas and opportunities. Recommend maintaining at least 0.1 SOL (~$15) for transaction fees.',
+    details: {
+      reasoning: 'You have enough SOL for fees but your stablecoin holdings are minimal. If you want to participate in DeFi opportunities, having more USDC on hand is advisable.',
+      risk: 'low',
+    },
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-3',
+    type: 'transfer',
+    title: 'Stake 2 SOL with Jito for yield',
+    description: 'Convert 2 SOL to jitoSOL for ~7.2% APY + MEV rewards. Keep 3.5 SOL liquid.',
+    details: {
+      reasoning: 'Jito\'s liquid staking gives you SOL exposure with staking yield. jitoSOL is fully liquid — swap back to SOL anytime. At current SOL price, this generates ~$42/year passively.',
+      risk: 'low',
+      estimatedGas: '~0.002 SOL',
+      recipient: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      amount: 2.0,
     },
     status: 'pending',
     createdAt: new Date().toISOString(),
@@ -149,11 +192,13 @@ function ActionCard({ action, onApprove, onReject }: {
 
 export function ActionsView() {
   const { publicKey, sendTransaction, connected } = useWallet();
-  const [actions, setActions] = useState<AgentAction[]>(FALLBACK_ACTIONS);
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
+  const [actions, setActions] = useState<AgentAction[]>(isDemo ? DEMO_ACTIONS : FALLBACK_ACTIONS);
   const [executing, setExecuting] = useState<string | null>(null);
   const [txResult, setTxResult] = useState<{ success: boolean; sig?: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(isDemo); // Demo: pretend already generated
 
   const generateActions = useCallback(async () => {
     if (!publicKey || !connected) return;
@@ -244,6 +289,8 @@ export function ActionsView() {
           <p className="text-gray-400 text-xs">
             {loading
               ? 'Aurora is analyzing your wallet...'
+              : isDemo
+              ? `${pendingCount} demo action${pendingCount !== 1 ? 's' : ''} • sample AI proposals`
               : aiGenerated
               ? `${pendingCount} AI-generated action${pendingCount !== 1 ? 's' : ''} • personalized for your wallet`
               : `${pendingCount} action${pendingCount !== 1 ? 's' : ''} waiting for approval`}

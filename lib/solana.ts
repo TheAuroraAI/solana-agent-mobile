@@ -115,6 +115,50 @@ export function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
+export const DEMO_WALLET_STATE: WalletState = {
+  address: 'DemoWa11etXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+  solBalance: 5.512,
+  solBalanceUsd: 826.8,
+  tokens: [
+    {
+      mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      symbol: 'USDC',
+      amount: 25000000,
+      decimals: 6,
+      uiAmount: 25.0,
+    },
+    {
+      mint: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      symbol: 'USDT',
+      amount: 10000000,
+      decimals: 6,
+      uiAmount: 10.0,
+    },
+  ],
+  recentTransactions: [
+    {
+      signature: '4xRd7pMz2KhWn9vUFsB1oLqCjTgA3mYeNksPwXiZuVt8',
+      blockTime: Math.floor(Date.now() / 1000) - 3600,
+      type: 'receive',
+      amount: 1.0,
+      status: 'success',
+    },
+    {
+      signature: '2mKp5qNsF8vLcXwYjT6aHdBr3eGiZuMoAk9WnPsQyRt7',
+      blockTime: Math.floor(Date.now() / 1000) - 86400,
+      type: 'send',
+      amount: 0.5,
+      status: 'success',
+    },
+    {
+      signature: '7vJd4mWp1hNsXkTqUoRcGi2eAyBz6LfVnMkPs3QtZwYr',
+      blockTime: Math.floor(Date.now() / 1000) - 172800,
+      type: 'other',
+      status: 'success',
+    },
+  ],
+};
+
 export function timeAgo(timestamp: number): string {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
   if (seconds < 60) return `${seconds}s ago`;

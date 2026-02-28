@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, MessageSquare, Zap, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -14,6 +14,9 @@ const navItems = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
+  const demoSuffix = isDemo ? '?demo=true' : '';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur border-t border-gray-800 safe-bottom">
@@ -23,7 +26,7 @@ export function BottomNav() {
           return (
             <Link
               key={href}
-              href={href}
+              href={`${href}${demoSuffix}`}
               className={clsx(
                 'flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors',
                 isActive

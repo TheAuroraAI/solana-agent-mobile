@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, User, Sparkles, AlertCircle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { type WalletState, getWalletState } from '@/lib/solana';
+import { type WalletState, getWalletState, DEMO_WALLET_STATE } from '@/lib/solana';
 
 interface Message {
   id: string;
@@ -23,7 +23,9 @@ const SUGGESTED_PROMPTS = [
 export function ChatView() {
   const { publicKey, connected } = useWallet();
   const router = useRouter();
-  const [walletState, setWalletState] = useState<WalletState | null>(null);
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
+  const [walletState, setWalletState] = useState<WalletState | null>(isDemo ? DEMO_WALLET_STATE : null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +33,7 @@ export function ChatView() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isDemo) return; // Demo mode: use demo wallet state
     if (!connected) {
       router.push('/');
       return;
@@ -38,7 +41,7 @@ export function ChatView() {
     if (publicKey) {
       getWalletState(publicKey.toString(), 'devnet').then(setWalletState).catch(console.error);
     }
-  }, [connected, publicKey, router]);
+  }, [connected, publicKey, router, isDemo]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,7 +116,7 @@ export function ChatView() {
         <div>
           <h1 className="text-white font-semibold text-sm">Aurora Agent</h1>
           <p className="text-gray-500 text-xs">
-            {walletState ? `Analyzing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
+            {isDemo ? 'Demo mode — sample wallet' : walletState ? `Analyzing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
           </p>
         </div>
         <div className="ml-auto">

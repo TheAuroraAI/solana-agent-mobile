@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useRouter } from 'next/navigation';
-import { RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink, FlaskConical } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
   type WalletState,
   getWalletState,
+  DEMO_WALLET_STATE,
   formatSol,
   formatUsd,
   truncateAddress,
@@ -17,7 +18,9 @@ import {
 export function DashboardView() {
   const { publicKey, connected } = useWallet();
   const router = useRouter();
-  const [walletState, setWalletState] = useState<WalletState | null>(null);
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
+  const [walletState, setWalletState] = useState<WalletState | null>(isDemo ? DEMO_WALLET_STATE : null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -35,12 +38,13 @@ export function DashboardView() {
   }, [publicKey]);
 
   useEffect(() => {
+    if (isDemo) return; // Demo mode: skip wallet check
     if (!connected) {
       router.push('/');
       return;
     }
     fetchWalletState();
-  }, [connected, fetchWalletState, router]);
+  }, [connected, fetchWalletState, router, isDemo]);
 
   const copyAddress = async () => {
     if (!publicKey) return;
@@ -62,6 +66,19 @@ export function DashboardView() {
 
   return (
     <div className="safe-top px-4 pt-6 pb-4">
+      {/* Demo Mode Banner */}
+      {isDemo && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+          <FlaskConical className="w-4 h-4 text-violet-400 flex-shrink-0" />
+          <p className="text-violet-300 text-xs">
+            Demo mode — sample data.{' '}
+            <button onClick={() => router.push('/')} className="underline hover:text-violet-200">
+              Connect wallet
+            </button>{' '}
+            for real data.
+          </p>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -106,7 +123,7 @@ export function DashboardView() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <a
-          href="/chat"
+          href={isDemo ? '/chat?demo=true' : '/chat'}
           className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
         >
           <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center">
@@ -115,7 +132,7 @@ export function DashboardView() {
           <span className="text-white text-xs font-medium">Ask Agent</span>
         </a>
         <a
-          href="/actions"
+          href={isDemo ? '/actions?demo=true' : '/actions'}
           className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
         >
           <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">

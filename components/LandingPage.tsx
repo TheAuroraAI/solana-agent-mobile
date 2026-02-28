@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { Wallet, Zap, Shield, Brain, ChevronRight } from 'lucide-react';
+import { Wallet, Zap, Shield, Brain, ChevronRight, PlayCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const features = [
@@ -86,6 +86,13 @@ export function LandingPage() {
           <Wallet className="w-5 h-5" />
           Connect Phantom Wallet
           <ChevronRight className="w-4 h-4 ml-auto" />
+        </button>
+        <button
+          onClick={() => router.push('/dashboard?demo=true')}
+          className="w-full mt-3 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 font-medium py-3.5 px-6 rounded-2xl flex items-center justify-center gap-3 transition-colors border border-gray-700/50"
+        >
+          <PlayCircle className="w-4 h-4 text-violet-400" />
+          Try Demo (no wallet needed)
         </button>
         <p className="text-center text-gray-500 text-xs mt-4">
           Non-custodial · Solana Devnet · Open Source
