@@ -1,0 +1,27 @@
+{
+  "name": "Aurora Agent — Autonomous Solana Wallet",
+  "short_name": "Aurora Agent",
+  "description": "An autonomous AI agent that manages your Solana wallet, analyzes your portfolio, and executes transactions with your approval.",
+  "theme_color": "#7C3AED",
+  "background_color": "#0A0A0A",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["finance", "utilities"],
+  "screenshots": []
+}

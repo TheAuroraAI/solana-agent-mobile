@@ -1,0 +1,96 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { Wallet, Zap, Shield, Brain, ChevronRight } from 'lucide-react';
+import { clsx } from 'clsx';
+
+const features = [
+  {
+    icon: Brain,
+    title: 'AI-Powered Analysis',
+    description: 'Claude AI analyzes your portfolio and suggests optimal moves in real time.',
+    color: 'text-violet-400',
+    bg: 'bg-violet-400/10',
+  },
+  {
+    icon: Zap,
+    title: 'Autonomous Actions',
+    description: 'Set goals in natural language. Aurora executes on-chain with your approval.',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-400/10',
+  },
+  {
+    icon: Shield,
+    title: 'Non-Custodial',
+    description: 'Your keys stay in Phantom. Aurora can only act when you approve.',
+    color: 'text-blue-400',
+    bg: 'bg-blue-400/10',
+  },
+];
+
+export function LandingPage() {
+  const { connected, publicKey } = useWallet();
+  const { setVisible } = useWalletModal();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      router.push('/dashboard');
+    }
+  }, [connected, publicKey, router]);
+
+  return (
+    <div className="flex flex-col min-h-screen px-6 safe-top">
+      {/* Header */}
+      <div className="pt-16 pb-8 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 mb-6">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center">
+            <span className="text-white text-lg font-bold">A</span>
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+          Aurora Agent
+        </h1>
+        <p className="text-gray-400 text-base leading-relaxed max-w-xs mx-auto">
+          Your autonomous AI wallet manager for Solana. Analyze, strategize, execute.
+        </p>
+      </div>
+
+      {/* Features */}
+      <div className="flex flex-col gap-3 mb-8">
+        {features.map(({ icon: Icon, title, description, color, bg }) => (
+          <div
+            key={title}
+            className="glass rounded-2xl p-4 flex items-start gap-4"
+          >
+            <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', bg)}>
+              <Icon className={clsx('w-5 h-5', color)} />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold text-sm mb-1">{title}</h3>
+              <p className="text-gray-400 text-xs leading-relaxed">{description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div className="mt-auto pb-12">
+        <button
+          onClick={() => setVisible(true)}
+          className="w-full bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-lg shadow-violet-900/30"
+        >
+          <Wallet className="w-5 h-5" />
+          Connect Phantom Wallet
+          <ChevronRight className="w-4 h-4 ml-auto" />
+        </button>
+        <p className="text-center text-gray-500 text-xs mt-4">
+          Non-custodial · Solana Devnet · Open Source
+        </p>
+      </div>
+    </div>
+  );
+}

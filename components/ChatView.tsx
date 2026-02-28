@@ -1,0 +1,224 @@
+'use client';
+
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/navigation';
+import { Send, User, Sparkles, AlertCircle } from 'lucide-react';
+import { clsx } from 'clsx';
+import { type WalletState, getWalletState } from '@/lib/solana';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const SUGGESTED_PROMPTS = [
+  'Analyze my portfolio and suggest improvements',
+  'What are the risks in my current holdings?',
+  'How should I rebalance for lower risk?',
+  'Show me my portfolio summary',
+];
+
+export function ChatView() {
+  const { publicKey, connected } = useWallet();
+  const router = useRouter();
+  const [walletState, setWalletState] = useState<WalletState | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!connected) {
+      router.push('/');
+      return;
+    }
+    if (publicKey) {
+      getWalletState(publicKey.toString(), 'devnet').then(setWalletState).catch(console.error);
+    }
+  }, [connected, publicKey, router]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = useCallback(async (userMessage: string) => {
+    if (!userMessage.trim() || isLoading) return;
+    setError(null);
+
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: userMessage };
+    const assistantId = (Date.now() + 1).toString();
+    const assistantMsg: Message = { id: assistantId, role: 'assistant', content: '' };
+
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+          walletState,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        // Parse Vercel AI SDK streaming format: "0:\"text\""
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('0:')) {
+            try {
+              fullText += JSON.parse(line.slice(2));
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: fullText } : m))
+              );
+            } catch { /* skip malformed */ }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, walletState, isLoading]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  return (
+    <div className="flex flex-col h-screen safe-top">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-6 pb-4 border-b border-gray-800/50">
+        <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
+          <Sparkles className="w-4 h-4 text-violet-400" />
+        </div>
+        <div>
+          <h1 className="text-white font-semibold text-sm">Aurora Agent</h1>
+          <p className="text-gray-500 text-xs">
+            {walletState ? `Analyzing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
+          </p>
+        </div>
+        <div className="ml-auto">
+          <div className={clsx(
+            'w-2 h-2 rounded-full',
+            isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400'
+          )} />
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
+        {messages.length === 0 && (
+          <div className="space-y-4">
+            <div className="text-center py-6">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/20 flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-7 h-7 text-violet-400" />
+              </div>
+              <h2 className="text-white font-semibold mb-1">Aurora is ready</h2>
+              <p className="text-gray-400 text-sm">
+                Ask me anything about your Solana wallet or tell me what actions to prepare.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => sendMessage(prompt)}
+                  className="glass rounded-xl px-4 py-3 text-left text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={clsx(
+              'flex gap-3 fade-up',
+              msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+            )}
+          >
+            <div
+              className={clsx(
+                'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                msg.role === 'user' ? 'bg-violet-600' : 'bg-gray-700'
+              )}
+            >
+              {msg.role === 'user' ? (
+                <User className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-violet-300" />
+              )}
+            </div>
+            <div
+              className={clsx(
+                'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
+                msg.role === 'user'
+                  ? 'bg-violet-600 text-white rounded-tr-sm'
+                  : 'glass text-gray-100 rounded-tl-sm'
+              )}
+            >
+              {msg.content || (
+                <div className="flex gap-1 items-center h-5">
+                  <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400" />
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-400 text-sm px-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Error: {error}</span>
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-gray-800/50 px-4 py-3 safe-bottom">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Aurora anything..."
+            className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/50 transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="w-11 h-11 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+          >
+            <Send className="w-4 h-4 text-white" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
