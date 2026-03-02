@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Send, User, Sparkles, AlertCircle } from 'lucide-react';
+import { Send, User, Sparkles, AlertCircle, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { type WalletState, getWalletState, getNetwork, DEMO_WALLET_STATE } from '@/lib/solana';
 
@@ -13,14 +13,36 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  timestamp: number;
 }
 
 const SUGGESTED_PROMPTS = [
   'Analyze my portfolio and suggest improvements',
-  'What are the risks in my current holdings?',
-  'How should I rebalance for lower risk?',
-  'Show me my portfolio summary',
+  'What DeFi yield opportunities should I consider?',
+  'Is my portfolio too concentrated? How should I rebalance?',
+  'Compare Jito vs Marinade for liquid staking',
+  'What are the biggest risks in my current position?',
+  'Create a strategy to grow my portfolio with moderate risk',
 ];
+
+function loadMessages(): Message[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const saved = localStorage.getItem('aurora-chat-history');
+    if (saved) {
+      const parsed = JSON.parse(saved) as Message[];
+      return parsed.slice(-50);
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveMessages(messages: Message[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('aurora-chat-history', JSON.stringify(messages.slice(-50)));
+  } catch { /* ignore */ }
+}
 
 export function ChatView() {
   const { publicKey, connected } = useWallet();
@@ -28,14 +50,14 @@ export function ChatView() {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get('demo') === 'true';
   const [walletState, setWalletState] = useState<WalletState | null>(isDemo ? DEMO_WALLET_STATE : null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(loadMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isDemo) return; // Demo mode: use demo wallet state
+    if (isDemo) return;
     if (!connected) {
       router.push('/');
       return;
@@ -49,13 +71,29 @@ export function ChatView() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(messages);
+    }
+  }, [messages]);
+
   const sendMessage = useCallback(async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
     setError(null);
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: userMessage };
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userMessage,
+      timestamp: Date.now(),
+    };
     const assistantId = (Date.now() + 1).toString();
-    const assistantMsg: Message = { id: assistantId, role: 'assistant', content: '' };
+    const assistantMsg: Message = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInput('');
@@ -71,7 +109,10 @@ export function ChatView() {
         }),
       });
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${res.status}`);
+      }
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -83,7 +124,6 @@ export function ChatView() {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        // Parse Vercel AI SDK streaming format: "0:\"text\""
         for (const line of chunk.split('\n')) {
           if (line.startsWith('0:')) {
             try {
@@ -96,7 +136,7 @@ export function ChatView() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Failed to reach Aurora');
       setMessages((prev) => prev.filter((m) => m.id !== assistantId));
     } finally {
       setIsLoading(false);
@@ -108,6 +148,11 @@ export function ChatView() {
     sendMessage(input);
   };
 
+  const clearHistory = () => {
+    setMessages([]);
+    localStorage.removeItem('aurora-chat-history');
+  };
+
   return (
     <div className="flex flex-col h-screen safe-top">
       {/* Header */}
@@ -115,13 +160,22 @@ export function ChatView() {
         <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
           <Sparkles className="w-4 h-4 text-violet-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-white font-semibold text-sm">Aurora Agent</h1>
           <p className="text-gray-500 text-xs">
-            {isDemo ? 'Demo mode — sample wallet' : walletState ? `Analyzing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
+            {isDemo ? 'Demo — sample portfolio' : walletState ? `Managing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="p-1.5 text-gray-600 hover:text-gray-400 transition-colors"
+              title="Clear chat history"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
           <div className={clsx(
             'w-2 h-2 rounded-full',
             isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400'
@@ -139,7 +193,7 @@ export function ChatView() {
               </div>
               <h2 className="text-white font-semibold mb-1">Aurora is ready</h2>
               <p className="text-gray-400 text-sm">
-                Ask me anything about your Solana wallet or tell me what actions to prepare.
+                Your autonomous wallet agent. Ask about portfolio strategy, DeFi opportunities, or risk management.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2">
@@ -147,7 +201,7 @@ export function ChatView() {
                 <button
                   key={prompt}
                   onClick={() => sendMessage(prompt)}
-                  className="glass rounded-xl px-4 py-3 text-left text-sm text-gray-300 hover:text-white transition-colors"
+                  className="glass rounded-xl px-4 py-3 text-left text-sm text-gray-300 hover:text-white hover:bg-gray-800/30 transition-colors"
                 >
                   {prompt}
                 </button>
@@ -198,7 +252,7 @@ export function ChatView() {
         {error && (
           <div className="flex items-center gap-2 text-red-400 text-sm px-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>Error: {error}</span>
+            <span>{error}</span>
           </div>
         )}
 

@@ -5,7 +5,8 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useSearchParams } from 'next/navigation';
 import { SystemProgram, Transaction, LAMPORTS_PER_SOL, PublicKey, Connection } from '@solana/web3.js';
 import {
-  Zap, CheckCircle, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, RefreshCw
+  Zap, CheckCircle, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, RefreshCw,
+  ArrowRightLeft, Landmark, BarChart3, Bell,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/solana';
@@ -16,7 +17,7 @@ type ActionStatus = 'pending' | 'approved' | 'rejected' | 'executed';
 
 interface AgentAction {
   id: string;
-  type: 'transfer' | 'alert' | 'analysis';
+  type: 'stake' | 'swap' | 'alert' | 'analysis' | 'transfer';
   title: string;
   description: string;
   details: {
@@ -25,6 +26,8 @@ interface AgentAction {
     estimatedGas?: string;
     recipient?: string;
     amount?: number;
+    protocol?: string;
+    expectedApy?: string;
   };
   status: ActionStatus;
   createdAt: string | Date;
@@ -49,43 +52,70 @@ const DEMO_ACTIONS: AgentAction[] = [
   {
     id: 'demo-1',
     type: 'analysis',
-    title: 'Portfolio diversification opportunity',
-    description: 'Your SOL allocation (97%) is heavily concentrated. Consider diversifying into liquid staking tokens.',
+    title: 'Portfolio concentration risk detected',
+    description: 'Your portfolio is 94% SOL — high single-asset exposure. Aurora recommends diversifying across liquid staking and stablecoins.',
     details: {
-      reasoning: 'With 5.51 SOL and only $35 in stablecoins, you\'re highly exposed to SOL price volatility. mSOL or jitoSOL would give you staking yield (~7% APY) while maintaining SOL exposure.',
+      reasoning: 'With 5.51 SOL ($826) and only $35 in stablecoins, a 20% SOL drawdown would reduce your portfolio by ~$160. Diversifying into jitoSOL maintains SOL exposure while earning 7.5% APY, and holding more USDC provides dry powder for opportunities.',
       risk: 'low',
+      protocol: 'Aurora',
     },
     status: 'pending',
     createdAt: new Date().toISOString(),
   },
   {
     id: 'demo-2',
-    type: 'alert',
-    title: 'Low stablecoin reserve',
-    description: 'Only $35 USDC/USDT for gas and opportunities. Recommend maintaining at least 0.1 SOL (~$15) for transaction fees.',
+    type: 'stake',
+    title: 'Stake 2.5 SOL with Jito for yield',
+    description: 'Convert 2.5 SOL → jitoSOL for ~7.5% APY + MEV rewards. Keep 3 SOL liquid.',
     details: {
-      reasoning: 'You have enough SOL for fees but your stablecoin holdings are minimal. If you want to participate in DeFi opportunities, having more USDC on hand is advisable.',
+      reasoning: 'Jito offers the highest liquid staking yield on Solana (7.5% base + MEV tips). jitoSOL is fully liquid — swap back via Jupiter anytime. At current price, this earns ~$62/year passively while maintaining SOL exposure.',
       risk: 'low',
+      estimatedGas: '~0.000005 SOL',
+      recipient: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      amount: 2.5,
+      protocol: 'Jito',
+      expectedApy: '~7.5%',
     },
     status: 'pending',
     createdAt: new Date().toISOString(),
   },
   {
     id: 'demo-3',
-    type: 'transfer',
-    title: 'Stake 2 SOL with Jito for yield',
-    description: 'Convert 2 SOL to jitoSOL for ~7.2% APY + MEV rewards. Keep 3.5 SOL liquid.',
+    type: 'swap',
+    title: 'Swap 0.5 SOL → USDC via Jupiter',
+    description: 'Build a USDC reserve for DeFi opportunities. Jupiter finds the best route across all Solana DEXs.',
     details: {
-      reasoning: 'Jito\'s liquid staking gives you SOL exposure with staking yield. jitoSOL is fully liquid — swap back to SOL anytime. At current SOL price, this generates ~$42/year passively.',
+      reasoning: 'Your stablecoin reserve is only $35. Having $75+ in USDC lets you quickly enter yield vaults (Kamino 8-12% APY) or buy dips without needing to unstake. Jupiter aggregates Orca, Raydium, and Phoenix for optimal execution.',
+      risk: 'medium',
+      estimatedGas: '~0.000005 SOL',
+      amount: 0.5,
+      protocol: 'Jupiter',
+    },
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-4',
+    type: 'alert',
+    title: 'Gas reserve healthy',
+    description: 'After proposed actions, you\'d retain ~3 SOL — sufficient for 600,000+ transactions on Solana.',
+    details: {
+      reasoning: 'Solana transactions cost ~0.000005 SOL. Your remaining liquid SOL would be more than adequate for months of active DeFi usage. No gas reserve concerns.',
       risk: 'low',
-      estimatedGas: '~0.002 SOL',
-      recipient: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-      amount: 2.0,
+      protocol: 'Solana',
     },
     status: 'pending',
     createdAt: new Date().toISOString(),
   },
 ];
+
+const ACTION_ICONS: Record<string, { icon: typeof Zap; color: string }> = {
+  stake: { icon: Landmark, color: 'text-emerald-400' },
+  swap: { icon: ArrowRightLeft, color: 'text-blue-400' },
+  transfer: { icon: Zap, color: 'text-yellow-400' },
+  analysis: { icon: BarChart3, color: 'text-violet-400' },
+  alert: { icon: Bell, color: 'text-orange-400' },
+};
 
 function RiskBadge({ risk }: { risk: 'low' | 'medium' | 'high' }) {
   return (
@@ -106,6 +136,7 @@ function ActionCard({ action, onApprove, onReject }: {
   onReject: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const { icon: TypeIcon, color: typeColor } = ACTION_ICONS[action.type] ?? ACTION_ICONS.analysis;
 
   const StatusIcon = {
     pending: Clock,
@@ -121,7 +152,7 @@ function ActionCard({ action, onApprove, onReject }: {
     executed: 'text-emerald-400',
   }[action.status];
 
-  const typeIcon = action.type === 'transfer' ? '📤' : action.type === 'alert' ? '🔔' : '📊';
+  const isExecutable = action.type === 'stake' || action.type === 'transfer';
 
   return (
     <div className={clsx(
@@ -131,7 +162,14 @@ function ActionCard({ action, onApprove, onReject }: {
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-start gap-3">
-            <span className="text-xl mt-0.5">{typeIcon}</span>
+            <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+              action.type === 'stake' ? 'bg-emerald-500/15' :
+              action.type === 'swap' ? 'bg-blue-500/15' :
+              action.type === 'alert' ? 'bg-orange-500/15' :
+              'bg-violet-500/15'
+            )}>
+              <TypeIcon className={clsx('w-4 h-4', typeColor)} />
+            </div>
             <div>
               <h3 className="text-white font-semibold text-sm">{action.title}</h3>
               <p className="text-gray-400 text-xs mt-1 leading-relaxed">{action.description}</p>
@@ -140,8 +178,18 @@ function ActionCard({ action, onApprove, onReject }: {
           <StatusIcon className={clsx('w-4 h-4 flex-shrink-0 mt-0.5', statusColor)} />
         </div>
 
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
           <RiskBadge risk={action.details.risk} />
+          {action.details.protocol && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800/80 text-gray-300 font-medium">
+              {action.details.protocol}
+            </span>
+          )}
+          {action.details.expectedApy && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+              {action.details.expectedApy} APY
+            </span>
+          )}
           {action.details.estimatedGas && (
             <span className="text-xs text-gray-500">Gas: {action.details.estimatedGas}</span>
           )}
@@ -149,20 +197,26 @@ function ActionCard({ action, onApprove, onReject }: {
             onClick={() => setExpanded(!expanded)}
             className="ml-auto text-gray-500 hover:text-gray-300 flex items-center gap-1 text-xs"
           >
-            Reasoning
+            Details
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
 
         {expanded && (
-          <div className="mt-3 p-3 bg-gray-900/50 rounded-xl">
+          <div className="mt-3 p-3 bg-gray-900/50 rounded-xl space-y-2">
             <p className="text-gray-300 text-xs leading-relaxed">{action.details.reasoning}</p>
             {action.details.recipient && (
-              <div className="mt-2 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <span className="text-gray-500 text-xs">To:</span>
                 <span className="text-gray-300 text-xs font-mono">
                   {action.details.recipient.slice(0, 8)}...{action.details.recipient.slice(-4)}
                 </span>
+              </div>
+            )}
+            {action.details.amount && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-xs">Amount:</span>
+                <span className="text-white text-xs font-medium">{action.details.amount} SOL</span>
               </div>
             )}
           </div>
@@ -184,7 +238,7 @@ function ActionCard({ action, onApprove, onReject }: {
             className="flex-1 py-3 text-sm text-emerald-400 hover:bg-emerald-500/5 transition-colors flex items-center justify-center gap-2 font-medium"
           >
             <CheckCircle className="w-4 h-4" />
-            {action.type === 'transfer' ? 'Sign & Send' : 'Approve'}
+            {isExecutable ? 'Sign & Send' : 'Acknowledge'}
           </button>
         </div>
       )}
@@ -198,9 +252,9 @@ export function ActionsView() {
   const isDemo = searchParams.get('demo') === 'true';
   const [actions, setActions] = useState<AgentAction[]>(isDemo ? DEMO_ACTIONS : FALLBACK_ACTIONS);
   const [executing, setExecuting] = useState<string | null>(null);
-  const [txResult, setTxResult] = useState<{ success: boolean; sig?: string } | null>(null);
+  const [txResult, setTxResult] = useState<{ success: boolean; sig?: string; error?: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState(isDemo); // Demo: pretend already generated
+  const [aiGenerated, setAiGenerated] = useState(isDemo);
 
   const generateActions = useCallback(async () => {
     if (!publicKey || !connected) return;
@@ -212,7 +266,7 @@ export function ActionsView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ walletState }),
       });
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
       if (data.actions?.length > 0) {
         setActions(data.actions);
@@ -220,6 +274,15 @@ export function ActionsView() {
       }
     } catch (err) {
       console.error('Failed to generate actions:', err);
+      setActions([{
+        id: 'error',
+        type: 'alert',
+        title: 'Action generation failed',
+        description: 'Aurora couldn\'t analyze your wallet right now. Tap refresh to try again.',
+        details: { reasoning: 'There was an error connecting to the AI service. This is usually temporary.', risk: 'low' },
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      }]);
     } finally {
       setLoading(false);
     }
@@ -235,15 +298,18 @@ export function ActionsView() {
     const action = actions.find((a) => a.id === id);
     if (!action) return;
 
-    if (action.type === 'transfer' && action.details.recipient && action.details.amount) {
+    const isExecutable = (action.type === 'stake' || action.type === 'transfer') &&
+      action.details.recipient && action.details.amount;
+
+    if (isExecutable) {
       setExecuting(id);
       try {
         const connection = new Connection(getRpcUrl(NETWORK), 'confirmed');
         const tx = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: publicKey!,
-            toPubkey: new PublicKey(action.details.recipient),
-            lamports: Math.floor(action.details.amount * LAMPORTS_PER_SOL),
+            toPubkey: new PublicKey(action.details.recipient!),
+            lamports: Math.floor(action.details.amount! * LAMPORTS_PER_SOL),
           })
         );
         const sig = await sendTransaction(tx, connection);
@@ -253,8 +319,9 @@ export function ActionsView() {
           prev.map((a) => (a.id === id ? { ...a, status: 'executed' } : a))
         );
       } catch (err) {
-        console.error('Transaction failed:', err);
-        setTxResult({ success: false });
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        console.error('Transaction failed:', errorMsg);
+        setTxResult({ success: false, error: errorMsg });
       } finally {
         setExecuting(null);
       }
@@ -273,11 +340,13 @@ export function ActionsView() {
 
   const handleRefresh = () => {
     setAiGenerated(false);
+    setTxResult(null);
     setActions(FALLBACK_ACTIONS);
     generateActions();
   };
 
   const pendingCount = actions.filter((a) => a.status === 'pending').length;
+  const executedCount = actions.filter((a) => a.status === 'executed').length;
 
   return (
     <div className="safe-top px-4 pt-6 pb-4">
@@ -287,22 +356,22 @@ export function ActionsView() {
           <Zap className="w-4 h-4 text-yellow-400" />
         </div>
         <div className="flex-1">
-          <h1 className="text-white font-semibold">Pending Actions</h1>
+          <h1 className="text-white font-semibold">Agent Actions</h1>
           <p className="text-gray-400 text-xs">
             {loading
               ? 'Aurora is analyzing your wallet...'
               : isDemo
-              ? `${pendingCount} demo action${pendingCount !== 1 ? 's' : ''} • sample AI proposals`
+              ? `${pendingCount} demo action${pendingCount !== 1 ? 's' : ''} — AI-generated proposals`
               : aiGenerated
-              ? `${pendingCount} AI-generated action${pendingCount !== 1 ? 's' : ''} • personalized for your wallet`
+              ? `${pendingCount} pending · ${executedCount} executed — personalized for your wallet`
               : `${pendingCount} action${pendingCount !== 1 ? 's' : ''} waiting for approval`}
           </p>
         </div>
-        {connected && !loading && (
+        {(connected || isDemo) && !loading && (
           <button
             onClick={handleRefresh}
             className="w-9 h-9 rounded-xl bg-gray-800/50 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
-            title="Refresh actions"
+            title="Regenerate actions"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -316,7 +385,7 @@ export function ActionsView() {
           </div>
           <div>
             <p className="text-white text-sm font-medium">Aurora is thinking...</p>
-            <p className="text-gray-400 text-xs mt-0.5">Analyzing your wallet state with AI</p>
+            <p className="text-gray-400 text-xs mt-0.5">Analyzing portfolio, checking DeFi yields, generating proposals</p>
           </div>
         </div>
       )}
@@ -330,7 +399,7 @@ export function ActionsView() {
             <>
               <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-emerald-400 font-medium text-sm">Transaction executed!</p>
+                <p className="text-emerald-400 font-medium text-sm">Transaction executed on-chain!</p>
                 {txResult.sig && (
                   <a
                     href={`https://solscan.io/tx/${txResult.sig}${getSolscanCluster(NETWORK)}`}
@@ -338,7 +407,7 @@ export function ActionsView() {
                     rel="noopener noreferrer"
                     className="text-xs text-emerald-300/70 underline mt-1 block"
                   >
-                    View on Solscan
+                    View on Solscan →
                   </a>
                 )}
               </div>
@@ -346,10 +415,15 @@ export function ActionsView() {
           ) : (
             <>
               <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-red-400 text-sm">Transaction failed. Please try again.</p>
+              <div>
+                <p className="text-red-400 text-sm font-medium">Transaction failed</p>
+                {txResult.error && (
+                  <p className="text-red-300/60 text-xs mt-0.5">{txResult.error.slice(0, 100)}</p>
+                )}
+              </div>
             </>
           )}
-          <button onClick={() => setTxResult(null)} className="ml-auto text-gray-500 text-lg">×</button>
+          <button onClick={() => setTxResult(null)} className="ml-auto text-gray-500 text-lg leading-none">×</button>
         </div>
       )}
 
@@ -369,9 +443,13 @@ export function ActionsView() {
       {!loading && actions.every((a) => a.status !== 'pending') && (
         <div className="text-center py-8">
           <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-          <p className="text-white font-semibold">All caught up!</p>
-          <p className="text-gray-400 text-sm mt-1">Aurora will notify you when new actions are ready.</p>
-          {connected && (
+          <p className="text-white font-semibold">All actions reviewed!</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {executedCount > 0
+              ? `${executedCount} transaction${executedCount !== 1 ? 's' : ''} executed on-chain.`
+              : 'Aurora will generate new proposals when your portfolio changes.'}
+          </p>
+          {(connected || isDemo) && (
             <button
               onClick={handleRefresh}
               className="mt-4 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition-colors"

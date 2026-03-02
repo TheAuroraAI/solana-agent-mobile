@@ -5,10 +5,9 @@ import {
   ConnectionProvider,
   WalletProvider as SolanaWalletProvider,
 } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
+import { getRpcUrl, getNetwork } from '@/lib/solana';
 
 // Import Phantom wallet styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -18,8 +17,8 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const solanaNetwork = getNetwork();
+  const endpoint = useMemo(() => getRpcUrl(solanaNetwork), [solanaNetwork]);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (

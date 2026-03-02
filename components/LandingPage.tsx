@@ -95,7 +95,7 @@ export function LandingPage() {
           Try Demo (no wallet needed)
         </button>
         <p className="text-center text-gray-500 text-xs mt-4">
-          Non-custodial · Solana Devnet · Open Source
+          Non-custodial · Open Source · Solana
         </p>
       </div>
     </div>

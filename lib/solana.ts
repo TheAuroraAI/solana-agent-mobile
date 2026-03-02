@@ -2,7 +2,6 @@ import {
   Connection,
   PublicKey,
   LAMPORTS_PER_SOL,
-  ParsedTransactionWithMeta,
 } from '@solana/web3.js';
 
 export const DEVNET_RPC = 'https://api.devnet.solana.com';
@@ -11,7 +10,9 @@ export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 export type SolanaNetwork = 'devnet' | 'mainnet';
 
 export function getNetwork(): SolanaNetwork {
-  const env = process.env.NEXT_PUBLIC_SOLANA_NETWORK;
+  const env = typeof window !== 'undefined'
+    ? process.env.NEXT_PUBLIC_SOLANA_NETWORK
+    : process.env.NEXT_PUBLIC_SOLANA_NETWORK;
   return env === 'mainnet' || env === 'mainnet-beta' ? 'mainnet' : 'devnet';
 }
 
@@ -36,6 +37,10 @@ export const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
   rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof: 'RENDER',
   hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux: 'HNT',
   MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac: 'MNGO',
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': 'ETH',
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': 'stSOL',
+  WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk: 'WEN',
+  EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: 'WIF',
 };
 
 export interface TokenBalance {
@@ -75,17 +80,23 @@ export async function getWalletState(
   const lamports = await connection.getBalance(publicKey);
   const solBalance = lamports / LAMPORTS_PER_SOL;
 
-  // Get recent transactions (last 5)
+  // Get recent transactions (last 10 for better analysis)
   const signatures = await connection.getSignaturesForAddress(publicKey, {
-    limit: 5,
+    limit: 10,
   });
 
-  const recentTransactions: TransactionSummary[] = signatures.map((sig) => ({
-    signature: sig.signature,
-    blockTime: sig.blockTime ?? 0,
-    type: 'other' as const,
-    status: sig.err ? 'error' : 'success',
-  }));
+  // Parse transaction types more intelligently
+  const recentTransactions: TransactionSummary[] = signatures.map((sig) => {
+    // Basic type inference from memo/log hints
+    let type: TransactionSummary['type'] = 'other';
+    if (sig.memo?.toLowerCase().includes('swap')) type = 'swap';
+    return {
+      signature: sig.signature,
+      blockTime: sig.blockTime ?? 0,
+      type,
+      status: sig.err ? 'error' : 'success',
+    };
+  });
 
   // Get token accounts
   let tokens: TokenBalance[] = [];
@@ -110,6 +121,12 @@ export async function getWalletState(
           decimals: amount.decimals,
           uiAmount: amount.uiAmount,
         };
+      })
+      .sort((a, b) => {
+        // Sort: stablecoins first, then by amount
+        const stableOrder = (s: string) =>
+          s === 'USDC' ? 0 : s === 'USDT' ? 1 : 10;
+        return stableOrder(a.symbol) - stableOrder(b.symbol) || b.uiAmount - a.uiAmount;
       });
   } catch {
     // Token fetch failure is non-critical
@@ -154,6 +171,7 @@ export async function getSolPrice(): Promise<number> {
 
 export function formatSol(amount: number): string {
   if (amount < 0.001) return '< 0.001 SOL';
+  if (amount < 1) return `${amount.toFixed(4)} SOL`;
   return `${amount.toFixed(3)} SOL`;
 }
 
@@ -171,44 +189,75 @@ export function truncateAddress(address: string): string {
 }
 
 export const DEMO_WALLET_STATE: WalletState = {
-  address: 'DemoWa11etXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  solBalance: 5.512,
-  solBalanceUsd: 826.8,
+  address: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  solBalance: 12.847,
+  solBalanceUsd: 1798.58, // ~$140/SOL
   tokens: [
     {
       mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       symbol: 'USDC',
-      amount: 25000000,
+      amount: 250000000,
       decimals: 6,
-      uiAmount: 25.0,
+      uiAmount: 250.0,
     },
     {
-      mint: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-      symbol: 'USDT',
-      amount: 10000000,
+      mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      symbol: 'jitoSOL',
+      amount: 3200000000,
+      decimals: 9,
+      uiAmount: 3.2,
+    },
+    {
+      mint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+      symbol: 'JUP',
+      amount: 1500000000,
       decimals: 6,
-      uiAmount: 10.0,
+      uiAmount: 1500,
+    },
+    {
+      mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      symbol: 'BONK',
+      amount: 50000000000000,
+      decimals: 5,
+      uiAmount: 500000000,
     },
   ],
   recentTransactions: [
     {
       signature: '4xRd7pMz2KhWn9vUFsB1oLqCjTgA3mYeNksPwXiZuVt8',
-      blockTime: Math.floor(Date.now() / 1000) - 3600,
-      type: 'receive',
-      amount: 1.0,
+      blockTime: Math.floor(Date.now() / 1000) - 1800,
+      type: 'swap',
+      amount: 2.0,
+      token: 'jitoSOL',
       status: 'success',
     },
     {
       signature: '2mKp5qNsF8vLcXwYjT6aHdBr3eGiZuMoAk9WnPsQyRt7',
-      blockTime: Math.floor(Date.now() / 1000) - 86400,
-      type: 'send',
-      amount: 0.5,
+      blockTime: Math.floor(Date.now() / 1000) - 7200,
+      type: 'receive',
+      amount: 5.0,
       status: 'success',
     },
     {
       signature: '7vJd4mWp1hNsXkTqUoRcGi2eAyBz6LfVnMkPs3QtZwYr',
+      blockTime: Math.floor(Date.now() / 1000) - 43200,
+      type: 'send',
+      amount: 1.5,
+      status: 'success',
+    },
+    {
+      signature: '3nKxYqRt8mFpVwJsHdLzUcMbNe1oGiXvWk6pA2QsRyJt',
+      blockTime: Math.floor(Date.now() / 1000) - 86400,
+      type: 'swap',
+      amount: 100.0,
+      token: 'USDC',
+      status: 'success',
+    },
+    {
+      signature: '9pTwXmRkVzNyJsHf2QaLdBc7KiUeGo5rWx1tA3MnPyQs',
       blockTime: Math.floor(Date.now() / 1000) - 172800,
-      type: 'other',
+      type: 'receive',
+      amount: 10.0,
       status: 'success',
     },
   ],

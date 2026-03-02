@@ -24,7 +24,7 @@ interface WalletState {
 
 interface AgentAction {
   id: string;
-  type: 'transfer' | 'alert' | 'analysis';
+  type: 'stake' | 'swap' | 'alert' | 'analysis' | 'transfer';
   title: string;
   description: string;
   details: {
@@ -33,6 +33,8 @@ interface AgentAction {
     estimatedGas?: string;
     recipient?: string;
     amount?: number;
+    protocol?: string;
+    expectedApy?: string;
   };
   status: 'pending';
   createdAt: string;
@@ -46,49 +48,71 @@ export async function POST(req: Request) {
       return Response.json({ error: 'walletState required' }, { status: 400 });
     }
 
-    const systemPrompt = `You are Aurora, an autonomous AI agent analyzing a Solana wallet to generate actionable proposals.
+    const totalUsd = walletState.solBalanceUsd +
+      walletState.tokens.reduce((sum, t) => {
+        if (t.symbol === 'USDC' || t.symbol === 'USDT') return sum + t.uiAmount;
+        return sum;
+      }, 0);
 
-Analyze the wallet state and generate 2-4 specific, actionable proposals. Return ONLY valid JSON.
+    const systemPrompt = `You are Aurora, an autonomous AI agent specializing in Solana DeFi portfolio management. You analyze wallets deeply and generate precise, actionable proposals.
 
-Rules:
-- "transfer" type: Propose staking or DeFi actions (e.g., stake SOL with Jito for yield). Use recipient "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn" (jitoSOL staking pool) for SOL staking proposals. Only propose if balance > 0.1 SOL.
-- "analysis" type: Portfolio insights, risk assessment, diversification advice, DeFi opportunities.
-- "alert" type: Price monitoring suggestions, concentration risk, low gas reserve warnings.
-- Risk: "low" for analysis/alerts, "medium" for DeFi actions, "high" for large movements.
-- Be specific to the ACTUAL wallet state (balance, tokens, transaction history).
-- If balance < 0.05 SOL: no transfer proposals. Focus on analysis/alerts only.
-- estimatedGas: "~0.002 SOL" for staking actions, omit for analysis/alerts.
-- Never propose sending funds to arbitrary wallets. Only suggest staking pools or DeFi protocols.
+WALLET ANALYSIS CONTEXT:
+- Address: ${walletState.address}
+- SOL: ${walletState.solBalance.toFixed(4)} SOL (~$${walletState.solBalanceUsd.toFixed(2)})
+- Tokens: ${walletState.tokens.length > 0 ? walletState.tokens.map(t => `${t.uiAmount} ${t.symbol}`).join(', ') : 'None'}
+- Total portfolio value: ~$${totalUsd.toFixed(2)}
+- Recent txns: ${walletState.recentTransactions.length} (${walletState.recentTransactions.filter(t => t.status === 'success').length} successful)
+- Composition: ${walletState.tokens.length === 0 ? '100% SOL' : `SOL + ${walletState.tokens.length} token(s)`}
 
-Response format (JSON array, no markdown):
+SOLANA DEFI KNOWLEDGE:
+- Liquid Staking: Jito (jitoSOL, ~7.5% APY + MEV rewards), Marinade (mSOL, ~6.8% APY), BlazeStake (bSOL, ~7.0% APY)
+- DEX: Jupiter (best aggregator, optimal routing across Orca/Raydium/Phoenix)
+- Lending: Kamino (auto-compounding vaults), MarginFi (lending/borrowing)
+- Stablecoin yield: Kamino USDC vaults (~8-12% APY), MarginFi USDC lending (~5-8% APY)
+
+ACTION TYPES:
+1. "stake" — Liquid staking proposals. Use recipient addresses:
+   - Jito (jitoSOL): "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn" (~7.5% APY + MEV)
+   - Marinade (mSOL): "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So" (~6.8% APY)
+2. "swap" — Token swap proposals via Jupiter. Specify fromToken, toToken, reasoning.
+3. "analysis" — Portfolio insights, risk assessment, strategy recommendations.
+4. "alert" — Risk warnings: concentration, low reserves, impermanent loss risk, etc.
+
+RULES:
+- Generate 3-5 specific actions tailored to this EXACT wallet state.
+- Always include at least 1 analysis and 1 actionable proposal (stake/swap).
+- If SOL balance > 1.0: suggest liquid staking for a portion (keep 0.5 SOL liquid minimum for gas).
+- If SOL balance > 5.0: suggest splitting between Jito AND Marinade for diversification.
+- If heavy concentration in one asset: suggest rebalancing via Jupiter swap.
+- If low stablecoins and decent SOL: suggest converting some SOL to USDC for opportunities.
+- If balance < 0.1 SOL: focus on analysis and alerts only, no transfers.
+- Risk ratings: "low" for analysis/staking, "medium" for swaps/rebalancing, "high" for large moves (>50% of portfolio).
+- estimatedGas: "~0.000005 SOL" for most Solana txns.
+- Each action must have specific amounts, not vague suggestions.
+- protocol field: name the specific protocol (Jito, Marinade, Jupiter, Kamino).
+- expectedApy field: include for staking/yield proposals.
+
+Return ONLY a valid JSON array, no markdown wrapping:
 [
   {
     "id": "1",
     "type": "analysis",
-    "title": "Short action title",
-    "description": "One sentence description of the proposed action",
+    "title": "Short title",
+    "description": "One sentence",
     "details": {
-      "reasoning": "2-3 sentences explaining why this action is recommended based on the actual wallet state",
+      "reasoning": "2-3 sentences explaining why, specific to wallet state",
       "risk": "low",
+      "protocol": "Aurora",
       "estimatedGas": "~0.000005 SOL"
     }
   }
 ]`;
 
-    const userMessage = `Wallet state:
-Address: ${walletState.address}
-SOL Balance: ${walletState.solBalance.toFixed(4)} SOL (~$${walletState.solBalanceUsd.toFixed(2)} USD)
-Token Holdings: ${walletState.tokens.length > 0 ? walletState.tokens.map((t) => `${t.uiAmount} ${t.symbol}`).join(', ') : 'None'}
-Recent Transactions: ${walletState.recentTransactions.length} transactions (${walletState.recentTransactions.filter((t) => t.status === 'success').length} successful)
-Portfolio Composition: ${walletState.tokens.length === 0 ? '100% SOL' : `SOL + ${walletState.tokens.length} token(s)`}
-
-Generate 2-4 specific actions for this wallet.`;
-
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
+      messages: [{ role: 'user', content: 'Generate personalized actions for this wallet.' }],
     });
 
     const content = message.content[0];
@@ -96,23 +120,44 @@ Generate 2-4 specific actions for this wallet.`;
       throw new Error('Unexpected response type');
     }
 
-    // Parse JSON response
+    // Parse JSON response — handle markdown wrapping robustly
     let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[];
     try {
+      let text = content.text.trim();
       // Strip markdown code blocks if present
-      const text = content.text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+      if (text.startsWith('```')) {
+        text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
+      }
+      // Find JSON array boundaries
+      const start = text.indexOf('[');
+      const end = text.lastIndexOf(']');
+      if (start !== -1 && end !== -1 && end > start) {
+        text = text.slice(start, end + 1);
+      }
       rawActions = JSON.parse(text);
     } catch {
-      throw new Error('Failed to parse AI response as JSON');
+      // Fallback: generate a single analysis action
+      rawActions = [{
+        id: '1',
+        type: 'analysis',
+        title: 'Portfolio snapshot',
+        description: `Your wallet holds ${walletState.solBalance.toFixed(3)} SOL (~$${walletState.solBalanceUsd.toFixed(2)}) with ${walletState.tokens.length} token(s).`,
+        details: {
+          reasoning: 'Aurora analyzed your wallet but encountered an issue generating detailed proposals. Try refreshing to get personalized action recommendations.',
+          risk: 'low',
+          protocol: 'Aurora',
+        },
+      }];
     }
 
-    // Add status and timestamp
+    // Normalize and add metadata
     const now = Date.now();
     const actions: AgentAction[] = rawActions.map((action, index) => ({
       ...action,
+      type: (['stake', 'swap', 'alert', 'analysis', 'transfer'].includes(action.type) ? action.type : 'analysis') as AgentAction['type'],
       id: String(index + 1),
       status: 'pending' as const,
-      createdAt: new Date(now - index * 1000 * 60 * 3).toISOString(),
+      createdAt: new Date(now - index * 1000 * 60 * 2).toISOString(),
     }));
 
     return Response.json({ actions });

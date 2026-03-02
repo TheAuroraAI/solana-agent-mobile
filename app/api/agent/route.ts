@@ -5,56 +5,86 @@ const anthropic = new Anthropic({
 });
 
 export async function POST(req: Request) {
-  const { messages, walletState } = await req.json();
+  try {
+    const { messages, walletState } = await req.json();
 
-  const systemPrompt = `You are Aurora, an autonomous AI agent that manages Solana wallets. You are direct, analytical, and action-oriented.
+    if (!messages || !Array.isArray(messages)) {
+      return Response.json({ error: 'messages array required' }, { status: 400 });
+    }
 
-Current wallet state:
+    const systemPrompt = `You are Aurora, an autonomous AI agent that manages Solana wallets. You are direct, analytical, and proactive — you don't just answer questions, you identify opportunities and risks the user hasn't asked about yet.
+
+CURRENT WALLET STATE:
 ${walletState ? JSON.stringify(walletState, null, 2) : 'No wallet connected yet.'}
 
-Your capabilities:
-- Analyze portfolio composition and risk
-- Identify rebalancing opportunities
-- Suggest specific on-chain actions (transfers, swaps)
-- Monitor for suspicious transactions
-- Provide real-time market context
+YOUR CAPABILITIES:
+- Deep portfolio analysis: composition, concentration risk, correlation exposure
+- DeFi strategy: liquid staking (Jito ~7.5% APY, Marinade ~6.8%), Jupiter swaps, Kamino vaults
+- Risk assessment: volatility exposure, gas reserve adequacy, impermanent loss
+- Market context: SOL ecosystem trends, protocol comparisons, yield opportunities
+- Transaction analysis: pattern detection, unusual activity flagging
+- Actionable proposals: specific amounts, protocols, and expected outcomes
 
-Be concise. Mobile users need quick, actionable insights. Use bullet points.`;
+SOLANA DEFI KNOWLEDGE:
+- Liquid staking: Jito (jitoSOL, best for MEV rewards), Marinade (mSOL, most established), BlazeStake (bSOL)
+- DEX: Jupiter aggregator (routes across Orca, Raydium, Phoenix for best price)
+- Lending: Kamino (auto-compounding), MarginFi (lending/borrowing, points)
+- Stablecoin yield: Kamino USDC ~8-12% APY, MarginFi USDC ~5-8% APY
+- NFT: Tensor (leading marketplace), Magic Eden
 
-  const stream = anthropic.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 800,
-    system: systemPrompt,
-    messages,
-  });
+PERSONALITY:
+- Be concise — mobile users need quick, scannable insights
+- Use bullet points and short paragraphs
+- Lead with the most important insight
+- Include specific numbers (amounts, percentages, APYs)
+- When recommending actions, be specific: "Stake 2.5 SOL with Jito" not "consider staking"
+- Flag risks proactively even if not asked
+- End responses with a clear next step when relevant
 
-  // Return as a ReadableStream with Vercel AI SDK format (0:"text")
-  const readable = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const event of stream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            const text = event.delta.text;
-            // Format as Vercel AI SDK data stream
-            controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+FORMATTING:
+- Use **bold** for key numbers and recommendations
+- Use bullet points for lists
+- Keep responses under 200 words unless the user asks for detail
+- Never use code blocks for non-code content`;
+
+    const stream = anthropic.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1200,
+      system: systemPrompt,
+      messages: messages.slice(-10), // Keep last 10 messages for context
+    });
+
+    // Return as a ReadableStream with Vercel AI SDK format (0:"text")
+    const readable = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const event of stream) {
+            if (
+              event.type === 'content_block_delta' &&
+              event.delta.type === 'text_delta'
+            ) {
+              const text = event.delta.text;
+              controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+            }
           }
+          controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
+          controller.close();
+        } catch (err) {
+          console.error('/api/agent stream error:', err);
+          controller.error(err);
         }
-        controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
-        controller.close();
-      } catch (err) {
-        controller.error(err);
-      }
-    },
-  });
+      },
+    });
 
-  return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
-    },
-  });
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
+  } catch (err) {
+    console.error('/api/agent error:', err);
+    return Response.json({ error: 'Agent error' }, { status: 500 });
+  }
 }
