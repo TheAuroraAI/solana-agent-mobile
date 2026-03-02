@@ -8,7 +8,9 @@ import {
   Zap, CheckCircle, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { getWalletState } from '@/lib/solana';
+import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/solana';
+
+const NETWORK = getNetwork();
 
 type ActionStatus = 'pending' | 'approved' | 'rejected' | 'executed';
 
@@ -204,7 +206,7 @@ export function ActionsView() {
     if (!publicKey || !connected) return;
     setLoading(true);
     try {
-      const walletState = await getWalletState(publicKey.toString(), 'devnet');
+      const walletState = await getWalletState(publicKey.toString(), NETWORK);
       const res = await fetch('/api/actions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -236,7 +238,7 @@ export function ActionsView() {
     if (action.type === 'transfer' && action.details.recipient && action.details.amount) {
       setExecuting(id);
       try {
-        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+        const connection = new Connection(getRpcUrl(NETWORK), 'confirmed');
         const tx = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: publicKey!,
@@ -331,7 +333,7 @@ export function ActionsView() {
                 <p className="text-emerald-400 font-medium text-sm">Transaction executed!</p>
                 {txResult.sig && (
                   <a
-                    href={`https://solscan.io/tx/${txResult.sig}?cluster=devnet`}
+                    href={`https://solscan.io/tx/${txResult.sig}${getSolscanCluster(NETWORK)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-emerald-300/70 underline mt-1 block"

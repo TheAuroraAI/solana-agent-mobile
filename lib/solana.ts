@@ -8,6 +8,21 @@ import {
 export const DEVNET_RPC = 'https://api.devnet.solana.com';
 export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 
+export type SolanaNetwork = 'devnet' | 'mainnet';
+
+export function getNetwork(): SolanaNetwork {
+  const env = process.env.NEXT_PUBLIC_SOLANA_NETWORK;
+  return env === 'mainnet' || env === 'mainnet-beta' ? 'mainnet' : 'devnet';
+}
+
+export function getSolscanCluster(network: SolanaNetwork): string {
+  return network === 'mainnet' ? '' : '?cluster=devnet';
+}
+
+export function getRpcUrl(network: SolanaNetwork): string {
+  return network === 'mainnet' ? MAINNET_RPC : DEVNET_RPC;
+}
+
 // Common Solana token mint → symbol mapping
 export const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
   EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 'USDC',

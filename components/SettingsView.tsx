@@ -7,6 +7,9 @@ import {
   Shield, Network, Bot, Bell, LogOut, ExternalLink, ChevronRight, Moon
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { getNetwork, getSolscanCluster } from '@/lib/solana';
+
+const NETWORK = getNetwork();
 
 interface SettingRowProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -129,7 +132,7 @@ export function SettingsView() {
           <SettingRow
             icon={ExternalLink}
             label="Solana Devnet Explorer"
-            href={`https://solscan.io/account/${publicKey?.toString()}?cluster=devnet`}
+            href={`https://solscan.io/account/${publicKey?.toString()}${getSolscanCluster(NETWORK)}`}
             iconColor="text-gray-400"
           />
         </div>

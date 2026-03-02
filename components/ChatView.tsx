@@ -5,7 +5,9 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, User, Sparkles, AlertCircle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { type WalletState, getWalletState, DEMO_WALLET_STATE } from '@/lib/solana';
+import { type WalletState, getWalletState, getNetwork, DEMO_WALLET_STATE } from '@/lib/solana';
+
+const NETWORK = getNetwork();
 
 interface Message {
   id: string;
@@ -39,7 +41,7 @@ export function ChatView() {
       return;
     }
     if (publicKey) {
-      getWalletState(publicKey.toString(), 'devnet').then(setWalletState).catch(console.error);
+      getWalletState(publicKey.toString(), NETWORK).then(setWalletState).catch(console.error);
     }
   }, [connected, publicKey, router, isDemo]);
 

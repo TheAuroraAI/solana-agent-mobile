@@ -8,12 +8,16 @@ import { clsx } from 'clsx';
 import {
   type WalletState,
   getWalletState,
+  getNetwork,
+  getSolscanCluster,
   DEMO_WALLET_STATE,
   formatSol,
   formatUsd,
   truncateAddress,
   timeAgo,
 } from '@/lib/solana';
+
+const NETWORK = getNetwork();
 
 export function DashboardView() {
   const { publicKey, connected } = useWallet();
@@ -28,7 +32,7 @@ export function DashboardView() {
     if (!publicKey) return;
     setLoading(true);
     try {
-      const state = await getWalletState(publicKey.toString(), 'devnet');
+      const state = await getWalletState(publicKey.toString(), NETWORK);
       setWalletState(state);
     } catch (err) {
       console.error('Failed to fetch wallet state:', err);
@@ -215,7 +219,7 @@ export function DashboardView() {
                   </div>
                 </div>
                 <a
-                  href={`https://solscan.io/tx/${tx.signature}?cluster=devnet`}
+                  href={`https://solscan.io/tx/${tx.signature}${getSolscanCluster(NETWORK)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1 text-gray-500 hover:text-gray-300"
