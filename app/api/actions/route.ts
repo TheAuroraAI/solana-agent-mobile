@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
 interface WalletState {
   address: string;
@@ -38,8 +38,8 @@ interface AgentAction {
 
 export async function POST(req: Request) {
   try {
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
     });
 
     const { walletState }: { walletState: WalletState } = await req.json();
@@ -108,33 +108,32 @@ Return ONLY a valid JSON array, no markdown wrapping:
   }
 ]`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: 'Generate personalized actions for this wallet.' }],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Generate personalized actions for this wallet.' },
+      ],
     });
 
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
+    const text = completion.choices[0]?.message?.content || '';
 
     // Parse JSON response — handle markdown wrapping robustly
     let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[];
     try {
-      let text = content.text.trim();
+      let cleaned = text.trim();
       // Strip markdown code blocks if present
-      if (text.startsWith('```')) {
-        text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
       }
       // Find JSON array boundaries
-      const start = text.indexOf('[');
-      const end = text.lastIndexOf(']');
+      const start = cleaned.indexOf('[');
+      const end = cleaned.lastIndexOf(']');
       if (start !== -1 && end !== -1 && end > start) {
-        text = text.slice(start, end + 1);
+        cleaned = cleaned.slice(start, end + 1);
       }
-      rawActions = JSON.parse(text);
+      rawActions = JSON.parse(cleaned);
     } catch {
       // Fallback: generate a single analysis action
       rawActions = [{

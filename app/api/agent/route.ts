@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
 export async function POST(req: Request) {
   try {
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
     });
     const { messages, walletState } = await req.json();
 
@@ -46,24 +46,24 @@ FORMATTING:
 - Keep responses under 200 words unless the user asks for detail
 - Never use code blocks for non-code content`;
 
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-6',
+    const stream = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 1200,
-      system: systemPrompt,
-      messages: messages.slice(-10), // Keep last 10 messages for context
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages.slice(-10),
+      ],
+      stream: true,
     });
 
-    // Return as a ReadableStream with Vercel AI SDK format (0:"text")
+    // Return as ReadableStream with Vercel AI SDK format (0:"text")
     const readable = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         try {
-          for await (const event of stream) {
-            if (
-              event.type === 'content_block_delta' &&
-              event.delta.type === 'text_delta'
-            ) {
-              const text = event.delta.text;
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content || '';
+            if (text) {
               controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
             }
           }
