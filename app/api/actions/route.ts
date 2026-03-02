@@ -1,9 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 interface WalletState {
   address: string;
   solBalance: number;
@@ -42,6 +38,10 @@ interface AgentAction {
 
 export async function POST(req: Request) {
   try {
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     const { walletState }: { walletState: WalletState } = await req.json();
 
     if (!walletState) {
