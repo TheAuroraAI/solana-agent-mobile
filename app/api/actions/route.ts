@@ -51,13 +51,14 @@ export async function POST(req: Request) {
 Analyze the wallet state and generate 2-4 specific, actionable proposals. Return ONLY valid JSON.
 
 Rules:
-- "transfer" type: Only propose micro-transfers (≤0.01 SOL) for demo purposes. Always use recipient "GpXHXs5KfzfXbNKcMLNbAMsJsgPsBE7y5GtwVoiuxYvH" (Aurora's address).
-- "analysis" type: Portfolio insights, risk assessment, diversification advice.
-- "alert" type: Price monitoring suggestions, risk alerts.
-- Risk: "low" for analysis/alerts, "medium" for small transfers, "high" for large transfers.
+- "transfer" type: Propose staking or DeFi actions (e.g., stake SOL with Jito for yield). Use recipient "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn" (jitoSOL staking pool) for SOL staking proposals. Only propose if balance > 0.1 SOL.
+- "analysis" type: Portfolio insights, risk assessment, diversification advice, DeFi opportunities.
+- "alert" type: Price monitoring suggestions, concentration risk, low gas reserve warnings.
+- Risk: "low" for analysis/alerts, "medium" for DeFi actions, "high" for large movements.
 - Be specific to the ACTUAL wallet state (balance, tokens, transaction history).
-- If balance < 0.01 SOL: no transfer proposals. Focus on analysis/alerts.
-- estimatedGas: "~0.000005 SOL" for transfers, omit for others.
+- If balance < 0.05 SOL: no transfer proposals. Focus on analysis/alerts only.
+- estimatedGas: "~0.002 SOL" for staking actions, omit for analysis/alerts.
+- Never propose sending funds to arbitrary wallets. Only suggest staking pools or DeFi protocols.
 
 Response format (JSON array, no markdown):
 [

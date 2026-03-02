@@ -8,6 +8,21 @@ import {
 export const DEVNET_RPC = 'https://api.devnet.solana.com';
 export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 
+// Common Solana token mint → symbol mapping
+export const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 'USDC',
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: 'USDT',
+  mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So: 'mSOL',
+  J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn: 'jitoSOL',
+  bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1: 'bSOL',
+  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: 'BONK',
+  JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN: 'JUP',
+  HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3: 'PYTH',
+  rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof: 'RENDER',
+  hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux: 'HNT',
+  MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac: 'MNGO',
+};
+
 export interface TokenBalance {
   mint: string;
   symbol: string;
@@ -75,7 +90,7 @@ export async function getWalletState(
         const amount = info.tokenAmount;
         return {
           mint: info.mint,
-          symbol: info.mint.slice(0, 6) + '...', // We'd need a token list for proper symbols
+          symbol: KNOWN_TOKEN_SYMBOLS[info.mint] ?? (info.mint.slice(0, 4) + '…'),
           amount: amount.amount,
           decimals: amount.decimals,
           uiAmount: amount.uiAmount,
@@ -85,8 +100,7 @@ export async function getWalletState(
     // Token fetch failure is non-critical
   }
 
-  // Rough SOL price estimate (would use real API in production)
-  const solPriceUsd = 150; // Approximate
+  const solPriceUsd = await getSolPrice();
 
   return {
     address: publicKeyStr,
@@ -95,6 +109,32 @@ export async function getWalletState(
     tokens,
     recentTransactions,
   };
+}
+
+let _solPriceCache: { price: number; ts: number } | null = null;
+
+export async function getSolPrice(): Promise<number> {
+  const now = Date.now();
+  if (_solPriceCache && now - _solPriceCache.ts < 60_000) {
+    return _solPriceCache.price;
+  }
+  try {
+    const res = await fetch(
+      'https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112',
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const price = data?.data?.['So11111111111111111111111111111111111111112']?.price;
+      if (typeof price === 'number' && price > 0) {
+        _solPriceCache = { price, ts: now };
+        return price;
+      }
+    }
+  } catch {
+    // Fall through to fallback
+  }
+  return _solPriceCache?.price ?? 140;
 }
 
 export function formatSol(amount: number): string {
