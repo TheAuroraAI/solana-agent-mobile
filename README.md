@@ -14,16 +14,27 @@ Aurora isn't a chatbot with a wallet view. It **autonomously**:
 4. **Streams** real-time AI analysis to your mobile screen as it processes
 5. **Learns your portfolio** — insights adapt to your actual holdings, not generic advice
 
+### SKR Guardian Staking Integration
+
+Aurora integrates with Solana Mobile's native **SKR** token ecosystem:
+
+- **SKR balance tracking** — automatically detected and displayed in your wallet
+- **Guardian Staking card** — featured in the Yield tab with live 20.2% APY
+- **AI agent awareness** — Aurora can advise on SKR staking strategy, cooldowns, and Guardian selection
+- **One-tap access** — links directly to `stake.solanamobile.com` for staking actions
+- **Seeker-native** — designed for Seeker device holders who hold SKR from the airdrop
+
 ### DeFi Protocol Knowledge
 
 Aurora has deep knowledge of the Solana DeFi ecosystem:
 
 | Category | Protocols |
 |----------|-----------|
+| **SKR Staking** | **Solana Mobile Guardian Staking (~20.2% APY)** — Seeker ecosystem |
 | Liquid Staking | Jito (jitoSOL, ~7.5% APY + MEV), Marinade (mSOL, ~6.8%), BlazeStake (bSOL) |
 | DEX Aggregation | Jupiter (optimal routing across Orca, Raydium, Phoenix) |
 | Yield Vaults | Kamino (auto-compounding, 8-12% USDC APY), MarginFi |
-| Token Intelligence | 15+ major tokens with symbol recognition |
+| Token Intelligence | 15+ major tokens with symbol recognition including SKR |
 
 ### Action Types
 
@@ -51,9 +62,10 @@ Aurora has deep knowledge of the Solana DeFi ecosystem:
 | Styling | Tailwind CSS 4 |
 | Wallet | @solana/wallet-adapter (Phantom) |
 | Blockchain | @solana/web3.js (Mainnet + Devnet) |
-| AI Chat | Groq Llama 3.3 70B (streaming) |
-| AI Actions | Groq Llama 3.3 70B (fast inference) |
+| AI Chat | Groq Llama 3.3 70B (streaming) or Claude (BYOK) |
+| AI Actions | Groq Llama 3.3 70B (fast inference) or Claude (BYOK) |
 | Price Feed | Jupiter Price API (real-time, 60s cache) |
+| SKR Integration | stake.solanamobile.com (SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ) |
 | Deployment | Vercel |
 
 ## Getting Started
@@ -95,13 +107,18 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 Browser (Mobile PWA)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
 ├── Dashboard → Portfolio + AI Insight Card + Allocation Chart
-├── Agent Chat → Streaming AI (Claude Sonnet 4.6) with DeFi knowledge
-├── Actions → AI Proposals: Stake/Swap/Analysis/Alert (Claude Haiku 4.5)
-└── Settings → Network, models, security info
+├── Agent Chat → Streaming AI (Claude Sonnet 4.6 or Groq) with DeFi + SKR knowledge
+├── Actions → AI Proposals: Stake/Swap/Analysis/Alert (Haiku 4.5 or Groq)
+├── Whales → Whale wallet tracker with clone functionality
+├── Unlocks → Token unlock calendar (upcoming vesting events)
+├── Yield → DeFi yield board + SKR Guardian Staking (featured)
+└── Settings → Network, RPC, AI models (BYOK), DeFi protocols, API keys
 
 API Routes (Next.js Edge)
-├── /api/agent → Anthropic streaming with portfolio context
-└── /api/actions → JSON action generation with DeFi protocol awareness
+├── /api/agent → Streaming AI with portfolio + SKR staking context
+├── /api/actions → DeFi action generation with protocol awareness
+├── /api/whales → Whale wallet monitoring
+└── /api/unlocks → Token vesting schedule data
 ```
 
 ## Disclaimer
