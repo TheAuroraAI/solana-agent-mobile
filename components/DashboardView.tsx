@@ -73,6 +73,9 @@ function PortfolioInsight({ walletState }: { walletState: WalletState }) {
             </span>
           </div>
           <p className="text-gray-300 text-xs leading-relaxed">{insight}</p>
+          <p className="text-gray-600 text-xs mt-1.5">
+            ⚠️ AI analysis uses estimated rates. Verify current APYs before acting.
+          </p>
 
           {/* Portfolio allocation bar */}
           <div className="mt-3 flex items-center gap-2">

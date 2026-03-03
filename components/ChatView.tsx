@@ -165,6 +165,9 @@ export function ChatView() {
           <p className="text-gray-500 text-xs">
             {isDemo ? 'Demo — sample portfolio' : walletState ? `Managing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
           </p>
+          <p className="text-gray-600 text-xs mt-0.5">
+            APYs &amp; prices are estimates — not financial advice
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (

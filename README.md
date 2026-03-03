@@ -51,8 +51,8 @@ Aurora has deep knowledge of the Solana DeFi ecosystem:
 | Styling | Tailwind CSS 4 |
 | Wallet | @solana/wallet-adapter (Phantom) |
 | Blockchain | @solana/web3.js (Mainnet + Devnet) |
-| AI Chat | Claude Sonnet 4.6 (streaming) |
-| AI Actions | Claude Haiku 4.5 (fast inference) |
+| AI Chat | Groq Llama 3.3 70B (streaming) |
+| AI Actions | Groq Llama 3.3 70B (fast inference) |
 | Price Feed | Jupiter Price API (real-time, 60s cache) |
 | Deployment | Vercel |
 
@@ -103,6 +103,12 @@ API Routes (Next.js Edge)
 ├── /api/agent → Anthropic streaming with portfolio context
 └── /api/actions → JSON action generation with DeFi protocol awareness
 ```
+
+## Disclaimer
+
+Aurora's AI analysis uses estimated DeFi rates (APYs, protocol yields) that reflect typical market conditions but are **not real-time data**. SOL price is fetched live from Jupiter Price API (60s cache), but protocol APYs and strategy recommendations are based on the AI model's training data and may not reflect current market conditions. Always verify rates on the protocol's official website before executing any transaction.
+
+*This is not financial advice.*
 
 ## Security
 

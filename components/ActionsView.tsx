@@ -366,6 +366,9 @@ export function ActionsView() {
               ? `${pendingCount} pending · ${executedCount} executed — personalized for your wallet`
               : `${pendingCount} action${pendingCount !== 1 ? 's' : ''} waiting for approval`}
           </p>
+          <p className="text-gray-600 text-xs mt-0.5">
+            Rates are estimates. Verify current APYs before approving.
+          </p>
         </div>
         {(connected || isDemo) && !loading && (
           <button
