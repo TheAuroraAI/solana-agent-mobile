@@ -35,7 +35,7 @@ function PortfolioInsight({ walletState }: { walletState: WalletState }) {
 
   const stablePct = 100 - solPct;
   const hasStaking = walletState.tokens.some(t =>
-    ['jitoSOL', 'mSOL', 'bSOL'].includes(t.symbol));
+    ['jitoSOL', 'mSOL', 'bSOL', 'SKR'].includes(t.symbol));
 
   // Risk assessment
   let riskLevel: 'low' | 'moderate' | 'high' = 'moderate';
@@ -280,12 +280,14 @@ export function DashboardView() {
                     'w-8 h-8 rounded-full flex items-center justify-center',
                     token.symbol === 'USDC' || token.symbol === 'USDT' ? 'bg-emerald-500/20' :
                     ['jitoSOL', 'mSOL', 'bSOL'].includes(token.symbol) ? 'bg-violet-500/20' :
+                    token.symbol === 'SKR' ? 'bg-violet-500/20' :
                     'bg-gray-700'
                   )}>
                     <span className={clsx(
                       'text-xs font-medium',
                       token.symbol === 'USDC' || token.symbol === 'USDT' ? 'text-emerald-400' :
                       ['jitoSOL', 'mSOL', 'bSOL'].includes(token.symbol) ? 'text-violet-400' :
+                      token.symbol === 'SKR' ? 'text-violet-400' :
                       'text-gray-300'
                     )}>
                       {token.symbol.slice(0, 3)}

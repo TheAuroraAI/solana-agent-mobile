@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/solana';
+import { getJupiterSwapTx, resolveOutputMint, SOL_MINT } from '@/lib/jupiter';
 
 const NETWORK = getNetwork();
 
@@ -152,7 +153,7 @@ function ActionCard({ action, onApprove, onReject }: {
     executed: 'text-emerald-400',
   }[action.status];
 
-  const isExecutable = action.type === 'stake' || action.type === 'transfer';
+  const isExecutable = action.type === 'stake' || action.type === 'swap' || action.type === 'transfer';
 
   return (
     <div className={clsx(
@@ -238,7 +239,7 @@ function ActionCard({ action, onApprove, onReject }: {
             className="flex-1 py-3 text-sm text-emerald-400 hover:bg-emerald-500/5 transition-colors flex items-center justify-center gap-2 font-medium"
           >
             <CheckCircle className="w-4 h-4" />
-            {isExecutable ? 'Sign & Send' : 'Acknowledge'}
+            {isExecutable ? (action.type === 'swap' ? 'Sign & Swap' : 'Sign & Send') : 'Acknowledge'}
           </button>
         </div>
       )}
@@ -298,21 +299,39 @@ export function ActionsView() {
     const action = actions.find((a) => a.id === id);
     if (!action) return;
 
-    const isExecutable = (action.type === 'stake' || action.type === 'transfer') &&
-      action.details.recipient && action.details.amount;
+    const isExecutable = (action.type === 'stake' || action.type === 'swap' || action.type === 'transfer') &&
+      action.details.amount;
 
     if (isExecutable) {
       setExecuting(id);
       try {
         const connection = new Connection(getRpcUrl(NETWORK), 'confirmed');
-        const tx = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey!,
-            toPubkey: new PublicKey(action.details.recipient!),
-            lamports: Math.floor(action.details.amount! * LAMPORTS_PER_SOL),
-          })
-        );
-        const sig = await sendTransaction(tx, connection);
+        const outputMint = resolveOutputMint(action.type, action.details.recipient);
+
+        let sig: string;
+        if (outputMint && action.type !== 'transfer') {
+          // Use Jupiter swap for staking (SOL→jitoSOL etc) and swaps (SOL→USDC)
+          const { transaction: swapTx } = await getJupiterSwapTx(
+            publicKey!.toString(),
+            SOL_MINT,
+            outputMint,
+            action.details.amount!,
+          );
+          sig = await sendTransaction(swapTx, connection);
+        } else if (action.details.recipient) {
+          // Plain SOL transfer
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: publicKey!,
+              toPubkey: new PublicKey(action.details.recipient),
+              lamports: Math.floor(action.details.amount! * LAMPORTS_PER_SOL),
+            })
+          );
+          sig = await sendTransaction(tx, connection);
+        } else {
+          throw new Error('No recipient or output mint for this action');
+        }
+
         await connection.confirmTransaction(sig, 'confirmed');
         setTxResult({ success: true, sig });
         setActions((prev) =>

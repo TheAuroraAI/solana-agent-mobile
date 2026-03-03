@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink,
+  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SKR_STAKING_URL, SKR_STAKING_APY } from '@/lib/solana';
@@ -79,6 +79,7 @@ const typeIcons = {
 
 export function YieldBoard() {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [skrExpanded, setSkrExpanded] = useState(false);
 
   return (
     <div className="mb-4">
@@ -92,40 +93,73 @@ export function YieldBoard() {
         </div>
       </div>
       {/* SKR Guardian Staking — featured Solana Mobile integration */}
-      <a
-        href={SKR_STAKING_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block mb-3 rounded-2xl overflow-hidden border border-violet-500/30 bg-gradient-to-br from-violet-900/30 to-indigo-900/20"
-      >
-        <div className="flex items-center gap-3 p-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-            <Smartphone className="w-4 h-4 text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-white text-sm font-medium">Solana Mobile</span>
-              <span className="text-xs bg-violet-500/30 text-violet-300 px-1.5 py-0.5 rounded-full font-medium">SKR</span>
+      <div className="mb-3 rounded-2xl overflow-hidden border border-violet-500/30 bg-gradient-to-br from-violet-900/30 to-indigo-900/20">
+        <button
+          onClick={() => setSkrExpanded(!skrExpanded)}
+          className="w-full text-left"
+        >
+          <div className="flex items-center gap-3 p-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-4 h-4 text-violet-400" />
             </div>
-            <p className="text-gray-400 text-xs mt-0.5">Guardian Staking · Supports Seeker ecosystem</p>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className="flex items-center gap-1 text-violet-400">
-              <TrendingUp className="w-3 h-3" />
-              <span className="text-sm font-bold">{SKR_STAKING_APY}%</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-medium">Solana Mobile</span>
+                <span className="text-xs bg-violet-500/30 text-violet-300 px-1.5 py-0.5 rounded-full font-medium">SKR</span>
+                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Featured</span>
+              </div>
+              <p className="text-gray-400 text-xs mt-0.5">Guardian Staking · Supports Seeker ecosystem</p>
             </div>
-            <span className="text-gray-600 text-xs">APY</span>
+            <div className="text-right flex-shrink-0">
+              <div className="flex items-center gap-1 text-violet-400">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-sm font-bold">{SKR_STAKING_APY}%</span>
+              </div>
+              <span className="text-gray-600 text-xs">APY</span>
+            </div>
+            <ChevronDown className={clsx('w-4 h-4 text-gray-500 transition-transform flex-shrink-0', skrExpanded && 'rotate-180')} />
           </div>
-          <ExternalLink className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
-        </div>
+        </button>
         <div className="px-3 pb-2.5">
           <p className="text-gray-400 text-xs leading-relaxed">
             Stake SKR and delegate to a Guardian to secure the Solana Mobile network.
             Earn compounding rewards while supporting dApp verification on Seeker devices.
-            48h cooldown to unstake.
           </p>
         </div>
-      </a>
+        {skrExpanded && (
+          <div className="px-3 pb-3 space-y-2">
+            <div className="p-2.5 bg-gray-900/50 rounded-xl space-y-2">
+              <h4 className="text-violet-300 text-xs font-semibold">How Guardian Staking Works</h4>
+              <ul className="text-gray-400 text-xs leading-relaxed space-y-1">
+                <li className="flex gap-2"><span className="text-violet-400">1.</span> Acquire SKR tokens (from Seeker airdrop or Jupiter swap)</li>
+                <li className="flex gap-2"><span className="text-violet-400">2.</span> Delegate SKR to a Guardian validator on stake.solanamobile.com</li>
+                <li className="flex gap-2"><span className="text-violet-400">3.</span> Guardians verify dApps in the Solana Mobile dApp Store</li>
+                <li className="flex gap-2"><span className="text-violet-400">4.</span> Earn ~{SKR_STAKING_APY}% APY in compounding SKR rewards</li>
+              </ul>
+              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-800/50">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span className="text-gray-400 text-xs">Low risk</span>
+                </div>
+                <span className="text-gray-700">·</span>
+                <span className="text-gray-400 text-xs">48h cooldown to unstake</span>
+                <span className="text-gray-700">·</span>
+                <span className="text-gray-400 text-xs">Mint: SKRb…hW3</span>
+              </div>
+            </div>
+            <a
+              href={SKR_STAKING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-white text-sm font-medium"
+            >
+              <Smartphone className="w-4 h-4" />
+              Stake SKR on Solana Mobile
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-2">
         {YIELD_OPPORTUNITIES.map((opp) => {

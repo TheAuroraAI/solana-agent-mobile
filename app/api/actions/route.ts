@@ -71,12 +71,17 @@ SOLANA DEFI KNOWLEDGE:
 - Stablecoin yield: Kamino USDC vaults (~8-12% APY), MarginFi USDC lending (~5-8% APY)
 
 ACTION TYPES:
-1. "stake" — Liquid staking proposals. Use recipient addresses:
+1. "stake" — Liquid staking proposals. Uses Jupiter swap API under the hood. Use recipient addresses:
    - Jito (jitoSOL): "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn" (~7.5% APY + MEV)
    - Marinade (mSOL): "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So" (~6.8% APY)
-2. "swap" — Token swap proposals via Jupiter. Specify fromToken, toToken, reasoning.
+2. "swap" — Token swap proposals via Jupiter aggregator. Executed on-chain with one-tap approval.
 3. "analysis" — Portfolio insights, risk assessment, strategy recommendations.
 4. "alert" — Risk warnings: concentration, low reserves, impermanent loss risk, etc.
+
+SKR GUARDIAN STAKING (Solana Mobile ecosystem):
+- If user holds SKR tokens (mint: SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3): suggest Guardian staking at stake.solanamobile.com (~20.2% APY, 48h cooldown)
+- If user holds NO SKR but has >2 SOL: suggest swapping some SOL for SKR to participate in Seeker ecosystem staking
+- SKR Guardian staking secures the Solana Mobile dApp verification network and supports the Seeker device ecosystem
 
 RULES:
 - Generate 3-5 specific actions tailored to this EXACT wallet state.

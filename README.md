@@ -36,18 +36,25 @@ Aurora has deep knowledge of the Solana DeFi ecosystem:
 | Yield Vaults | Kamino (auto-compounding, 8-12% USDC APY), MarginFi |
 | Token Intelligence | 15+ major tokens with symbol recognition including SKR |
 
-### Action Types
+### On-Chain Action Execution
 
-| Type | Description | On-chain? |
+Aurora doesn't just suggest — it **executes**. Every actionable proposal (staking, swapping) generates a real on-chain transaction via Jupiter V6 Swap API:
+
+| Type | Description | Execution |
 |------|------------|-----------|
-| **Stake** | Liquid staking proposals with specific pools and APY | Yes (Phantom signing) |
-| **Swap** | Token swap proposals via Jupiter aggregator | Proposed (Jupiter link) |
+| **Stake** | Liquid staking: SOL → jitoSOL/mSOL/bSOL | Jupiter swap tx → Phantom sign → on-chain |
+| **Swap** | Token swaps: SOL → USDC, etc. | Jupiter aggregator → Phantom sign → on-chain |
 | **Analysis** | Portfolio insights, risk scoring, strategy recommendations | Read-only |
 | **Alert** | Risk warnings: concentration, low reserves, volatility | Read-only |
 
-## Mobile-First Design
+The agent proposes, you approve with one tap, and the transaction executes — no copy-pasting addresses, no manual DEX interactions.
 
-- Installable as a PWA on Seeker and any mobile browser
+## Installable PWA
+
+Aurora registers a service worker and is installable as a standalone app on Seeker and any mobile device:
+
+- **Offline-capable** — service worker caches the app shell for instant loading
+- **Add to Home Screen** — runs fullscreen, no browser chrome
 - Touch-optimized with 44px tap targets, safe area support for notch devices
 - Dark-first design with glass morphism UI
 - Portfolio allocation visualization with real-time risk scoring
@@ -64,8 +71,10 @@ Aurora has deep knowledge of the Solana DeFi ecosystem:
 | Blockchain | @solana/web3.js (Mainnet + Devnet) |
 | AI Chat | Groq Llama 3.3 70B (streaming) or Claude (BYOK) |
 | AI Actions | Groq Llama 3.3 70B (fast inference) or Claude (BYOK) |
+| DeFi Execution | Jupiter V6 Swap API (staking + swaps, on-chain via Phantom) |
 | Price Feed | Jupiter Price API (real-time, 60s cache) |
-| SKR Integration | stake.solanamobile.com (SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ) |
+| SKR Integration | Solana Mobile Guardian Staking (SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ) |
+| PWA | Custom service worker with app shell caching |
 | Deployment | Vercel |
 
 ## Getting Started
@@ -95,11 +104,12 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 ## Demo Flow
 
 1. **Visit the app** → Choose "Connect Phantom" or "Try Demo"
-2. **Dashboard** → See your balance, token holdings, and Aurora's portfolio insight with risk score
-3. **Agent Chat** → Ask about DeFi strategy, yield opportunities, or risk management
+2. **Dashboard** → See your balance, token holdings (including SKR), and Aurora's portfolio insight with risk score
+3. **Agent Chat** → Ask about DeFi strategy, SKR Guardian staking, yield opportunities, or risk management
 4. **Actions** → Review AI-generated proposals: staking, swaps, alerts — each with reasoning and risk level
-5. **Approve** → For staking actions, Phantom pops up → transaction executes on-chain
+5. **Approve** → Tap "Sign & Send" — Aurora builds a Jupiter swap transaction, Phantom signs it, executes on-chain
 6. **Verify** → Confirmed transaction with Solscan link
+7. **Yield** → Browse DeFi opportunities including SKR Guardian Staking (20.2% APY) with detailed delegation guide
 
 ## Architecture
 
@@ -149,3 +159,11 @@ Click "Try Demo" to see Aurora in action without connecting a wallet.
 ---
 
 *Built during MONOLITH Hackathon 2026 — February–March 2026*
+
+### Key Technical Differentiators
+
+- **Real transactions, not links**: Staking and swap actions execute on-chain via Jupiter V6 Swap API + Phantom signing — not redirect links
+- **Streaming AI**: Real-time token-by-token streaming from Groq (free) or Claude (BYOK) — responsive on mobile
+- **Non-custodial agent**: Aurora proposes but never holds keys — all signing happens in Phantom
+- **SKR-native**: Built for Seeker holders with deep Guardian staking knowledge and SKR balance tracking
+- **Installable PWA**: Service worker with offline caching, standalone mode, portrait lock
