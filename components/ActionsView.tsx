@@ -306,6 +306,19 @@ export function ActionsView() {
       setExecuting(id);
       try {
         const connection = new Connection(getRpcUrl(NETWORK), 'confirmed');
+
+        // Pre-flight: validate balance before attempting transaction
+        if (action.details.amount && publicKey) {
+          const lamports = await connection.getBalance(publicKey);
+          const solBalance = lamports / LAMPORTS_PER_SOL;
+          const requiredAmount = action.details.amount + 0.01; // amount + gas buffer
+          if (solBalance < requiredAmount) {
+            throw new Error(
+              `Insufficient SOL: need ${requiredAmount.toFixed(4)} SOL (${action.details.amount} + gas) but wallet has ${solBalance.toFixed(4)} SOL`
+            );
+          }
+        }
+
         const outputMint = resolveOutputMint(action.type, action.details.recipient);
 
         let sig: string;
@@ -339,8 +352,21 @@ export function ActionsView() {
         );
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        // User-friendly error messages
+        let displayError = errorMsg;
+        if (errorMsg.includes('Insufficient SOL')) {
+          displayError = errorMsg; // Already user-friendly
+        } else if (errorMsg.includes('User rejected')) {
+          displayError = 'Transaction cancelled — you rejected the signing request.';
+        } else if (errorMsg.includes('blockhash')) {
+          displayError = 'Transaction expired. Please try again.';
+        } else if (errorMsg.includes('0x1')) {
+          displayError = 'Insufficient funds for this transaction.';
+        } else if (errorMsg.includes('slippage')) {
+          displayError = 'Price moved too much (slippage exceeded). Try again with a smaller amount.';
+        }
         console.error('Transaction failed:', errorMsg);
-        setTxResult({ success: false, error: errorMsg });
+        setTxResult({ success: false, error: displayError });
       } finally {
         setExecuting(null);
       }

@@ -113,45 +113,114 @@ Return ONLY a valid JSON array, no markdown wrapping:
   }
 ]`;
 
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 2048,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Generate personalized actions for this wallet.' },
-      ],
-    });
+    // Request with JSON mode for structured output
+    let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[] = [];
+    let parseSuccess = false;
 
-    const text = completion.choices[0]?.message?.content || '';
+    for (let attempt = 0; attempt < 2 && !parseSuccess; attempt++) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 2048,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt + '\n\nReturn a JSON object with key "actions" containing the array.' },
+            { role: 'user', content: attempt === 0
+              ? 'Generate personalized actions for this wallet.'
+              : 'Generate 3 simple actions for this wallet as a JSON object with "actions" array.' },
+          ],
+        });
 
-    // Parse JSON response — handle markdown wrapping robustly
-    let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[];
-    try {
-      let cleaned = text.trim();
-      // Strip markdown code blocks if present
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
+        const text = completion.choices[0]?.message?.content || '';
+        let cleaned = text.trim();
+        // Strip markdown code blocks if present
+        if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
+        }
+
+        const parsed = JSON.parse(cleaned);
+        rawActions = Array.isArray(parsed) ? parsed : (parsed.actions ?? [parsed]);
+        if (rawActions.length > 0) parseSuccess = true;
+      } catch {
+        if (attempt === 1) {
+          // Final fallback after 2 attempts
+          rawActions = [];
+        }
       }
-      // Find JSON array boundaries
-      const start = cleaned.indexOf('[');
-      const end = cleaned.lastIndexOf(']');
-      if (start !== -1 && end !== -1 && end > start) {
-        cleaned = cleaned.slice(start, end + 1);
-      }
-      rawActions = JSON.parse(cleaned);
-    } catch {
-      // Fallback: generate a single analysis action
-      rawActions = [{
+    }
+
+    // If LLM failed, generate deterministic actions based on wallet state
+    if (rawActions.length === 0) {
+      rawActions = [];
+      // Analysis action
+      rawActions.push({
         id: '1',
         type: 'analysis',
-        title: 'Portfolio snapshot',
+        title: 'Portfolio overview',
         description: `Your wallet holds ${walletState.solBalance.toFixed(3)} SOL (~$${walletState.solBalanceUsd.toFixed(2)}) with ${walletState.tokens.length} token(s).`,
         details: {
-          reasoning: 'Aurora analyzed your wallet but encountered an issue generating detailed proposals. Try refreshing to get personalized action recommendations.',
+          reasoning: `Total portfolio value: ~$${totalUsd.toFixed(2)}. ${walletState.solBalance > 2 ? 'Consider liquid staking a portion for yield.' : 'Low balance — focus on accumulation.'}`,
           risk: 'low',
           protocol: 'Aurora',
         },
-      }];
+      });
+      // Staking suggestion if enough SOL
+      if (walletState.solBalance > 1.0) {
+        const stakeAmount = Math.min(walletState.solBalance * 0.4, walletState.solBalance - 0.5);
+        rawActions.push({
+          id: '2',
+          type: 'stake',
+          title: `Stake ${stakeAmount.toFixed(2)} SOL with Jito`,
+          description: `Convert ${stakeAmount.toFixed(2)} SOL → jitoSOL for ~7.5% APY + MEV rewards.`,
+          details: {
+            reasoning: 'Jito offers the highest liquid staking yield on Solana. jitoSOL is fully liquid — swap back via Jupiter anytime.',
+            risk: 'low',
+            estimatedGas: '~0.000005 SOL',
+            recipient: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+            amount: parseFloat(stakeAmount.toFixed(4)),
+            protocol: 'Jito',
+            expectedApy: '~7.5%',
+          },
+        });
+      }
+    }
+
+    // Inject SKR Guardian staking action if user holds SKR or has enough SOL
+    const hasSKR = walletState.tokens.some(t => t.symbol === 'SKR' && t.uiAmount > 0);
+    const hasSkrAction = rawActions.some(a =>
+      a.title?.toLowerCase().includes('skr') || a.details?.protocol?.toLowerCase().includes('guardian')
+    );
+    if (!hasSkrAction && (hasSKR || walletState.solBalance > 2)) {
+      const skrToken = walletState.tokens.find(t => t.symbol === 'SKR');
+      if (hasSKR && skrToken) {
+        rawActions.push({
+          id: String(rawActions.length + 1),
+          type: 'stake',
+          title: `Stake ${skrToken.uiAmount.toLocaleString()} SKR with Guardian`,
+          description: `Delegate your SKR to a Guardian validator for ~20.2% APY. Supports Solana Mobile dApp verification.`,
+          details: {
+            reasoning: `You hold ${skrToken.uiAmount.toLocaleString()} SKR tokens. Guardian staking earns ~20.2% APY with a 48h cooldown to unstake. This secures the Solana Mobile dApp Store network while generating yield.`,
+            risk: 'low',
+            protocol: 'Solana Mobile Guardian',
+            expectedApy: '~20.2%',
+          },
+        });
+      } else if (walletState.solBalance > 2) {
+        rawActions.push({
+          id: String(rawActions.length + 1),
+          type: 'swap',
+          title: 'Swap SOL → SKR for Guardian Staking',
+          description: `Acquire SKR tokens via Jupiter swap, then stake for ~20.2% APY on Solana Mobile.`,
+          details: {
+            reasoning: `You have no SKR tokens but enough SOL to participate. SKR Guardian staking offers ~20.2% APY — one of the highest yields on Solana. Swap a small amount to try it.`,
+            risk: 'medium',
+            estimatedGas: '~0.000005 SOL',
+            amount: 0.5,
+            protocol: 'Jupiter → SKR Guardian',
+            expectedApy: '~20.2%',
+          },
+        });
+      }
     }
 
     // Normalize and add metadata

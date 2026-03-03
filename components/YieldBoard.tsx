@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown,
+  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown, RefreshCw,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SKR_STAKING_URL, SKR_STAKING_APY } from '@/lib/solana';
@@ -16,9 +16,10 @@ interface YieldOpportunity {
   risk: 'low' | 'medium' | 'high';
   type: 'staking' | 'lending' | 'lp';
   description: string;
+  source?: 'live' | 'fallback';
 }
 
-const YIELD_OPPORTUNITIES: YieldOpportunity[] = [
+const FALLBACK_OPPORTUNITIES: YieldOpportunity[] = [
   {
     protocol: 'Jito',
     strategy: 'Liquid Staking',
@@ -80,6 +81,29 @@ const typeIcons = {
 export function YieldBoard() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [skrExpanded, setSkrExpanded] = useState(false);
+  const [opportunities, setOpportunities] = useState<YieldOpportunity[]>(FALLBACK_OPPORTUNITIES);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRates = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/yields');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.rates?.length > 0) {
+          setOpportunities(data.rates);
+          setLastUpdated(data.lastUpdated);
+        }
+      }
+    } catch {
+      // Keep fallback rates
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchRates(); }, []);
 
   return (
     <div className="mb-4">
@@ -87,9 +111,24 @@ export function YieldBoard() {
         <h2 className="text-gray-400 text-xs font-medium uppercase tracking-wider">
           Yield Opportunities
         </h2>
-        <div className="flex items-center gap-1 text-gray-600 text-xs">
-          <Info className="w-3 h-3" />
-          <span>APYs are estimates</span>
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-gray-600 text-xs">
+              Updated {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <button
+            onClick={fetchRates}
+            disabled={loading}
+            className="text-gray-600 hover:text-gray-400 transition-colors"
+            title="Refresh rates"
+          >
+            <RefreshCw className={clsx('w-3 h-3', loading && 'animate-spin')} />
+          </button>
+          <div className="flex items-center gap-1 text-gray-600 text-xs">
+            <Info className="w-3 h-3" />
+            <span>APYs are estimates</span>
+          </div>
         </div>
       </div>
       {/* SKR Guardian Staking — featured Solana Mobile integration */}
@@ -162,7 +201,7 @@ export function YieldBoard() {
       </div>
 
       <div className="space-y-2">
-        {YIELD_OPPORTUNITIES.map((opp) => {
+        {opportunities.map((opp) => {
           const Icon = typeIcons[opp.type];
           const isExpanded = expanded === opp.protocol;
           return (
@@ -201,6 +240,9 @@ export function YieldBoard() {
                   <div className="flex items-center gap-1 text-emerald-400">
                     <TrendingUp className="w-3 h-3" />
                     <span className="text-sm font-bold">{opp.apy}%</span>
+                    {opp.source === 'live' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Live rate" />
+                    )}
                   </div>
                   <span className="text-gray-600 text-xs">TVL {opp.tvl}</span>
                 </div>
