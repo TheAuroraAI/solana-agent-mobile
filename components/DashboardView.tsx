@@ -6,11 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
-  FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft, Activity,
+  FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
   Calendar, ChevronRight,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
-import { WhaleAlerts } from './WhaleAlerts';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -340,23 +339,6 @@ export function DashboardView() {
           <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
         </div>
       </Link>
-
-      {/* Whale Alerts teaser */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">Whale Watch</span>
-          </div>
-          <a
-            href={isDemo ? '/whales?demo=true' : '/whales'}
-            className="text-violet-400 text-xs hover:text-violet-300"
-          >
-            See all →
-          </a>
-        </div>
-        <WhaleAlerts demo={isDemo} />
-      </div>
 
       {/* Recent Transactions */}
       <div>
