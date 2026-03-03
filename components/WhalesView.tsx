@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { WhaleAlerts } from './WhaleAlerts';
+import { WalletClone } from './WalletClone';
 
 export function WhalesView() {
   const searchParams = useSearchParams();
@@ -31,6 +32,14 @@ export function WhalesView() {
           <p className="text-gray-500 text-xs mt-0.5">Volume 24h</p>
         </div>
       </div>
+
+      {/* Smart Wallet Clone */}
+      <div className="mb-6">
+        <WalletClone demo={isDemo} />
+      </div>
+
+      {/* Separator */}
+      <div className="border-t border-gray-800/50 mb-5" />
 
       <WhaleAlerts demo={isDemo} />
     </div>

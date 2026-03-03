@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { YieldBoard } from './YieldBoard';
+import { UnlockCalendar } from './UnlockCalendar';
 import { WhaleAlerts } from './WhaleAlerts';
 import { clsx } from 'clsx';
 import {
@@ -307,6 +308,9 @@ export function DashboardView() {
           </div>
         </div>
       )}
+
+      {/* Token Unlock Calendar */}
+      <UnlockCalendar />
 
       {/* Yield Opportunities */}
       <YieldBoard />
