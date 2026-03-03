@@ -41,7 +41,15 @@ export const KNOWN_TOKEN_SYMBOLS: Record<string, string> = {
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj': 'stSOL',
   WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk: 'WEN',
   EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: 'WIF',
+  SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3: 'SKR',
 };
+
+// Solana Mobile SKR token constants
+export const SKR_MINT = 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3';
+export const SKR_STAKING_PROGRAM = 'SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ';
+export const SKR_STAKING_URL = 'https://stake.solanamobile.com';
+export const SKR_STAKING_APY = 20.2; // Current APY as of March 2026
+export const SKR_DECIMALS = 9;
 
 export interface TokenBalance {
   mint: string;
@@ -220,6 +228,13 @@ export const DEMO_WALLET_STATE: WalletState = {
       amount: 50000000000000,
       decimals: 5,
       uiAmount: 500000000,
+    },
+    {
+      mint: SKR_MINT,
+      symbol: 'SKR',
+      amount: 5000_000000000,
+      decimals: 9,
+      uiAmount: 5000,
     },
   ],
   recentTransactions: [

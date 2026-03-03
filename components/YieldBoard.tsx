@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import {
-  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck,
+  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { SKR_STAKING_URL, SKR_STAKING_APY } from '@/lib/solana';
 
 interface YieldOpportunity {
   protocol: string;
@@ -90,6 +91,42 @@ export function YieldBoard() {
           <span>APYs are estimates</span>
         </div>
       </div>
+      {/* SKR Guardian Staking — featured Solana Mobile integration */}
+      <a
+        href={SKR_STAKING_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block mb-3 rounded-2xl overflow-hidden border border-violet-500/30 bg-gradient-to-br from-violet-900/30 to-indigo-900/20"
+      >
+        <div className="flex items-center gap-3 p-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+            <Smartphone className="w-4 h-4 text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium">Solana Mobile</span>
+              <span className="text-xs bg-violet-500/30 text-violet-300 px-1.5 py-0.5 rounded-full font-medium">SKR</span>
+            </div>
+            <p className="text-gray-400 text-xs mt-0.5">Guardian Staking · Supports Seeker ecosystem</p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className="flex items-center gap-1 text-violet-400">
+              <TrendingUp className="w-3 h-3" />
+              <span className="text-sm font-bold">{SKR_STAKING_APY}%</span>
+            </div>
+            <span className="text-gray-600 text-xs">APY</span>
+          </div>
+          <ExternalLink className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+        </div>
+        <div className="px-3 pb-2.5">
+          <p className="text-gray-400 text-xs leading-relaxed">
+            Stake SKR and delegate to a Guardian to secure the Solana Mobile network.
+            Earn compounding rewards while supporting dApp verification on Seeker devices.
+            48h cooldown to unstake.
+          </p>
+        </div>
+      </a>
+
       <div className="space-y-2">
         {YIELD_OPPORTUNITIES.map((opp) => {
           const Icon = typeIcons[opp.type];

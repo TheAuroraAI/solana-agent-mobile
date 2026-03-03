@@ -17,6 +17,7 @@ SOLANA DEFI KNOWLEDGE:
 - Lending: Kamino (auto-compounding), MarginFi (lending/borrowing, points)
 - Stablecoin yield: Kamino USDC ~8-12% APY, MarginFi USDC ~5-8% APY
 - NFT: Tensor (leading marketplace), Magic Eden
+- SKR Guardian Staking: Stake SKR (Solana Mobile's native token) to Guardian validators. 20.2% APY. 48h cooldown to unstake. Supports Seeker device ecosystem. Stake at stake.solanamobile.com. Mint: SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3
 
 PERSONALITY:
 - Be concise — mobile users need quick, scannable insights
