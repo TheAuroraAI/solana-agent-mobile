@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, User, Sparkles, AlertCircle, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { type WalletState, getWalletState, getNetwork, DEMO_WALLET_STATE } from '@/lib/solana';
+import { loadSettings } from '@/lib/settings';
 
 const NETWORK = getNetwork();
 
@@ -100,12 +101,16 @@ export function ChatView() {
     setIsLoading(true);
 
     try {
+      const settings = loadSettings();
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
           walletState,
+          anthropicApiKey: settings.anthropicApiKey || undefined,
+          chatModel: settings.chatModel,
+          defiProtocols: settings.defiProtocols,
         }),
       });
 
