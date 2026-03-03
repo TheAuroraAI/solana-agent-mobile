@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Settings } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems = [
   { href: '/dashboard', label: 'Wallet', icon: Home },
   { href: '/chat', label: 'Agent', icon: MessageSquare },
   { href: '/actions', label: 'Actions', icon: Zap },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/whales', label: 'Whales', icon: Activity },
 ];
 
 export function BottomNav() {

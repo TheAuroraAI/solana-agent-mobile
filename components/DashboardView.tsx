@@ -5,10 +5,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
-  FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
+  FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft, Activity,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { YieldBoard } from './YieldBoard';
+import { WhaleAlerts } from './WhaleAlerts';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -309,6 +310,23 @@ export function DashboardView() {
 
       {/* Yield Opportunities */}
       <YieldBoard />
+
+      {/* Whale Alerts teaser */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">Whale Watch</span>
+          </div>
+          <a
+            href={isDemo ? '/whales?demo=true' : '/whales'}
+            className="text-violet-400 text-xs hover:text-violet-300"
+          >
+            See all →
+          </a>
+        </div>
+        <WhaleAlerts demo={isDemo} />
+      </div>
 
       {/* Recent Transactions */}
       <div>
