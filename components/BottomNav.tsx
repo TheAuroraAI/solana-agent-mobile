@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -10,6 +10,8 @@ const navItems = [
   { href: '/chat', label: 'Agent', icon: MessageSquare },
   { href: '/actions', label: 'Actions', icon: Zap },
   { href: '/whales', label: 'Whales', icon: Activity },
+  { href: '/unlocks', label: 'Unlocks', icon: Calendar },
+  { href: '/yield', label: 'Yield', icon: TrendingUp },
 ];
 
 export function BottomNav() {
@@ -28,14 +30,14 @@ export function BottomNav() {
               key={href}
               href={`${href}${demoSuffix}`}
               className={clsx(
-                'flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors',
+                'flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors',
                 isActive
                   ? 'text-violet-400'
                   : 'text-gray-500 hover:text-gray-300'
               )}
             >
-              <Icon className={clsx('w-5 h-5', isActive && 'stroke-[2.5]')} />
-              <span className="text-xs font-medium">{label}</span>
+              <Icon className={clsx('w-4.5 h-4.5', isActive && 'stroke-[2.5]')} />
+              <span className="text-[10px] font-medium">{label}</span>
             </Link>
           );
         })}

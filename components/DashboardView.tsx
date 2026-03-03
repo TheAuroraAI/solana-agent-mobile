@@ -3,13 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
   FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft, Activity,
+  Calendar, ChevronRight,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
-import { YieldBoard } from './YieldBoard';
-import { UnlockCalendar } from './UnlockCalendar';
 import { WhaleAlerts } from './WhaleAlerts';
 import { clsx } from 'clsx';
 import {
@@ -309,11 +309,37 @@ export function DashboardView() {
         </div>
       )}
 
-      {/* Token Unlock Calendar */}
-      <UnlockCalendar />
+      {/* Token Unlock Calendar — teaser */}
+      <Link href={isDemo ? '/unlocks?demo=true' : '/unlocks'} className="block mb-3">
+        <div className="glass rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-4 h-4 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-semibold">Token Unlocks</p>
+              <p className="text-gray-400 text-xs">8 upcoming events · tap to explore</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+        </div>
+      </Link>
 
-      {/* Yield Opportunities */}
-      <YieldBoard />
+      {/* Yield Opportunities — teaser */}
+      <Link href={isDemo ? '/yield?demo=true' : '/yield'} className="block mb-3">
+        <div className="glass rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-semibold">Yield Opportunities</p>
+              <p className="text-gray-400 text-xs">Up to 28.4% APY · 5 protocols</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+        </div>
+      </Link>
 
       {/* Whale Alerts teaser */}
       <div className="mb-4">
