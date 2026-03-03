@@ -72,3 +72,17 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* Price ticker auto-scroll */
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-scroll {
+  animation: tickerScroll 20s linear infinite;
+}
+
+.ticker-scroll:hover {
+  animation-play-state: paused;
+}

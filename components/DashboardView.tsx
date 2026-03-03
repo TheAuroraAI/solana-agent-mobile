@@ -5,8 +5,10 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
-  FlaskConical, Sparkles, AlertTriangle, Zap,
+  FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
 } from 'lucide-react';
+import { PriceTicker } from './PriceTicker';
+import { YieldBoard } from './YieldBoard';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -180,6 +182,9 @@ export function DashboardView() {
         </div>
       )}
 
+      {/* Live Price Ticker */}
+      <PriceTicker demo={isDemo} />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -302,6 +307,9 @@ export function DashboardView() {
         </div>
       )}
 
+      {/* Yield Opportunities */}
+      <YieldBoard />
+
       {/* Recent Transactions */}
       <div>
         <h2 className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-3">
@@ -327,7 +335,9 @@ export function DashboardView() {
                     className={clsx(
                       'w-8 h-8 rounded-full flex items-center justify-center',
                       tx.status === 'success'
-                        ? tx.type === 'send' ? 'bg-orange-500/20' : 'bg-emerald-500/20'
+                        ? tx.type === 'send' ? 'bg-orange-500/20' :
+                          tx.type === 'swap' ? 'bg-blue-500/20' :
+                          'bg-emerald-500/20'
                         : 'bg-red-500/20'
                     )}
                   >
@@ -335,10 +345,12 @@ export function DashboardView() {
                       <ArrowUpRight className="w-4 h-4 text-orange-400" />
                     ) : tx.type === 'receive' ? (
                       <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
+                    ) : tx.type === 'swap' ? (
+                      <ArrowRightLeft className="w-4 h-4 text-blue-400" />
                     ) : tx.status === 'error' ? (
                       <AlertTriangle className="w-4 h-4 text-red-400" />
                     ) : (
-                      <ArrowUpRight className="w-4 h-4 text-blue-400" />
+                      <ArrowUpRight className="w-4 h-4 text-gray-400" />
                     )}
                   </div>
                   <div>
@@ -348,15 +360,30 @@ export function DashboardView() {
                     </p>
                   </div>
                 </div>
-                <a
-                  href={`https://solscan.io/tx/${tx.signature}${getSolscanCluster(NETWORK)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 text-gray-500 hover:text-gray-300"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="flex items-center gap-3">
+                  {tx.amount != null && (
+                    <div className="text-right">
+                      <p className={clsx(
+                        'text-sm font-mono font-medium',
+                        tx.type === 'send' ? 'text-orange-400' :
+                        tx.type === 'receive' ? 'text-emerald-400' :
+                        'text-gray-300'
+                      )}>
+                        {tx.type === 'send' ? '-' : tx.type === 'receive' ? '+' : ''}
+                        {tx.amount < 1 ? tx.amount.toFixed(4) : tx.amount.toLocaleString()} {tx.token ?? 'SOL'}
+                      </p>
+                    </div>
+                  )}
+                  <a
+                    href={`https://solscan.io/tx/${tx.signature}${getSolscanCluster(NETWORK)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 text-gray-500 hover:text-gray-300 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             ))}
           </div>
