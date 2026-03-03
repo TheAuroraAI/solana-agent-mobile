@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/whales', label: 'Whales', icon: Activity },
   { href: '/unlocks', label: 'Unlocks', icon: Calendar },
   { href: '/yield', label: 'Yield', icon: TrendingUp },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function BottomNav() {
