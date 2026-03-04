@@ -23,6 +23,7 @@ import {
   truncateAddress,
   timeAgo,
 } from '@/lib/solana';
+import { detectSeeker, type SeekerInfo } from '@/lib/seeker';
 
 const NETWORK = getNetwork();
 
@@ -126,6 +127,7 @@ export function DashboardView() {
   const [walletState, setWalletState] = useState<WalletState | null>(isDemo ? DEMO_WALLET_STATE : null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [seekerInfo, setSeekerInfo] = useState<SeekerInfo>({ isSeeker: false, features: [] });
 
   const fetchWalletState = useCallback(async () => {
     if (!publicKey) return;
@@ -139,6 +141,10 @@ export function DashboardView() {
       setLoading(false);
     }
   }, [publicKey]);
+
+  useEffect(() => {
+    setSeekerInfo(detectSeeker());
+  }, []);
 
   useEffect(() => {
     if (isDemo) return;
@@ -181,6 +187,21 @@ export function DashboardView() {
             </button>{' '}
             for real data.
           </p>
+        </div>
+      )}
+
+      {/* Seeker Device Banner */}
+      {seekerInfo.isSeeker && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+          <span className="text-emerald-400 text-sm flex-shrink-0">📱</span>
+          <div>
+            <p className="text-emerald-300 text-xs font-medium">
+              {seekerInfo.model} detected — enhanced features active
+            </p>
+            <p className="text-emerald-400/60 text-[10px] mt-0.5">
+              {seekerInfo.features.slice(0, 2).join(' · ')}
+            </p>
+          </div>
         </div>
       )}
 
