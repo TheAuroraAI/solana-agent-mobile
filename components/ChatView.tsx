@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Send, User, Sparkles, AlertCircle, Trash2 } from 'lucide-react';
+import { Send, User, Sparkles, AlertCircle, Trash2, Mic, MicOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import { type WalletState, getWalletState, getNetwork, DEMO_WALLET_STATE } from '@/lib/solana';
 import { loadSettings } from '@/lib/settings';
@@ -79,6 +79,41 @@ export function ChatView() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+
+  const toggleVoice = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results as ArrayLike<{ [index: number]: { transcript: string } }>)
+        .map((r) => r[0].transcript)
+        .join('');
+      setInput(transcript);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [isListening]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-send prompt from query param (e.g. from Clone Portfolio)
@@ -319,6 +354,20 @@ export function ChatView() {
             autoComplete="off"
             className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/50 transition-colors"
           />
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-label={isListening ? 'Stop listening' : 'Voice input'}
+            title="Voice input (hold to speak)"
+            className={clsx(
+              'w-11 h-11 rounded-xl flex items-center justify-center transition-colors flex-shrink-0',
+              isListening
+                ? 'bg-red-500 hover:bg-red-400 animate-pulse'
+                : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'
+            )}
+          >
+            {isListening ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-gray-400" />}
+          </button>
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
