@@ -121,7 +121,7 @@ function WhaleCard({ alert, isNew }: { alert: WhaleAlert; isNew: boolean }) {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={`/actions?demo=true&copy=${encodeURIComponent(alert.wallet)}&token=${alert.token}`}
+            href={`/actions?${demo ? 'demo=true&' : ''}copy=${encodeURIComponent(alert.wallet)}&token=${alert.token}`}
             className="text-xs bg-violet-500/20 text-violet-300 px-2.5 py-1 rounded-full font-medium hover:bg-violet-500/30 transition-colors"
           >
             Copy Trade

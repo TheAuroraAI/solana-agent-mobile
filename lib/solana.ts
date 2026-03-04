@@ -10,9 +10,18 @@ export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 export type SolanaNetwork = 'devnet' | 'mainnet';
 
 export function getNetwork(): SolanaNetwork {
-  const env = typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_SOLANA_NETWORK
-    : process.env.NEXT_PUBLIC_SOLANA_NETWORK;
+  // Check localStorage settings (set by Settings toggle) before falling back to env
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('aurora-settings');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { network?: string };
+        if (parsed.network === 'mainnet') return 'mainnet';
+        if (parsed.network === 'devnet') return 'devnet';
+      }
+    } catch { /* ignore */ }
+  }
+  const env = process.env.NEXT_PUBLIC_SOLANA_NETWORK;
   return env === 'mainnet' || env === 'mainnet-beta' ? 'mainnet' : 'devnet';
 }
 

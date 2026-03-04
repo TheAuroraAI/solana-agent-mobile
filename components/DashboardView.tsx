@@ -33,7 +33,11 @@ function computeHealthScore(ws: WalletState): { score: number; label: string; co
   let score = 50;
 
   // Diversification (+15 if not 100% SOL)
-  const totalUsd = ws.solBalanceUsd + ws.tokens.reduce((s, t) => s + t.uiAmount, 0);
+  // Only count stablecoins as USD (other tokens lack price data here)
+  const stableUsdForHealth = ws.tokens
+    .filter(t => t.symbol === 'USDC' || t.symbol === 'USDT')
+    .reduce((s, t) => s + t.uiAmount, 0);
+  const totalUsd = ws.solBalanceUsd + stableUsdForHealth;
   const solPct = totalUsd > 0 ? (ws.solBalanceUsd / totalUsd) * 100 : 100;
   if (solPct <= 70) score += 15;
   else if (solPct <= 85) score += 8;
