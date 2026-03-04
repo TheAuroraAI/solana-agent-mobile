@@ -24,7 +24,8 @@ import {
   timeAgo,
 } from '@/lib/solana';
 import { detectSeeker, type SeekerInfo } from '@/lib/seeker';
-import { Shield } from 'lucide-react';
+import { getActionStats } from '@/lib/action-log';
+import { Shield, Bot } from 'lucide-react';
 
 const NETWORK = getNetwork();
 
@@ -187,6 +188,55 @@ function PortfolioInsight({ walletState }: { walletState: WalletState }) {
   );
 }
 
+function AutonomyScore() {
+  const stats = getActionStats();
+  const total = stats.total || 1; // avoid /0
+  const executionRate = Math.round((stats.executed / total) * 100);
+  const score = Math.min(100, stats.executed * 15 + stats.approved * 5 + Math.min(stats.total, 10) * 2);
+
+  const level = score >= 80 ? 'Autonomous' : score >= 40 ? 'Guided' : score >= 10 ? 'Learning' : 'New';
+  const levelColor = score >= 80 ? 'text-emerald-400' : score >= 40 ? 'text-violet-400' : score >= 10 ? 'text-amber-400' : 'text-gray-400';
+
+  return (
+    <div className="glass rounded-2xl p-4 mb-4">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+          <Bot className="w-4 h-4 text-violet-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-white text-sm font-semibold">Agent Autonomy</span>
+            <span className={clsx('text-xs px-1.5 py-0.5 rounded-full font-medium bg-gray-800', levelColor)}>
+              {level}
+            </span>
+          </div>
+          <p className="text-gray-500 text-xs mt-0.5">
+            {stats.total === 0
+              ? 'No actions yet — Aurora learns from your decisions'
+              : `${stats.executed} executed · ${stats.approved} approved · ${stats.rejected} rejected`}
+          </p>
+        </div>
+      </div>
+      {stats.total > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+            <p className="text-white text-sm font-bold">{stats.total}</p>
+            <p className="text-gray-500 text-[10px]">Proposals</p>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+            <p className="text-emerald-400 text-sm font-bold">{executionRate}%</p>
+            <p className="text-gray-500 text-[10px]">Execution</p>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+            <p className={clsx('text-sm font-bold', levelColor)}>{score}</p>
+            <p className="text-gray-500 text-[10px]">Score</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DashboardView() {
   const { publicKey, connected } = useWallet();
   const router = useRouter();
@@ -258,17 +308,32 @@ export function DashboardView() {
         </div>
       )}
 
-      {/* Seeker Device Banner */}
+      {/* Seeker-Aware Mode */}
       {seekerInfo.isSeeker && (
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 text-sm flex-shrink-0">📱</span>
-          <div>
-            <p className="text-emerald-300 text-xs font-medium">
-              {seekerInfo.model} detected — enhanced features active
-            </p>
-            <p className="text-emerald-400/60 text-[10px] mt-0.5">
-              {seekerInfo.features.slice(0, 2).join(' · ')}
-            </p>
+        <div className="mb-4 p-3 bg-gradient-to-r from-violet-500/15 via-amber-500/10 to-violet-500/15 border border-violet-500/30 rounded-xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/30 to-amber-500/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">📱</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-white text-sm font-semibold">{seekerInfo.model} Mode</p>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-400">
+                  ACTIVE
+                </span>
+              </div>
+              <p className="text-violet-300/70 text-xs mt-0.5">
+                {seekerInfo.features.slice(0, 2).join(' · ')}
+              </p>
+            </div>
+            <a
+              href="https://stake.solanamobile.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs bg-violet-500/20 text-violet-300 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-500/30 transition-colors flex-shrink-0"
+            >
+              Stake SKR
+            </a>
           </div>
         </div>
       )}
@@ -316,11 +381,16 @@ export function DashboardView() {
             <span className="text-gray-500 text-xs">+ {walletState.tokens.length} token{walletState.tokens.length !== 1 ? 's' : ''}</span>
           )}
           <span className={clsx(
-            'text-xs flex items-center gap-0.5 ml-auto',
-            NETWORK === 'mainnet' ? 'text-emerald-400' : 'text-blue-400'
+            'text-xs flex items-center gap-1 ml-auto px-2 py-0.5 rounded-full font-medium',
+            NETWORK === 'mainnet'
+              ? 'bg-emerald-500/15 text-emerald-400'
+              : 'bg-blue-500/15 text-blue-400'
           )}>
-            <TrendingUp className="w-3 h-3" />
-            {NETWORK === 'mainnet' ? 'Live' : 'Devnet'}
+            <span className={clsx(
+              'w-1.5 h-1.5 rounded-full',
+              NETWORK === 'mainnet' ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'
+            )} />
+            {NETWORK === 'mainnet' ? 'LIVE' : 'DEVNET'}
           </span>
         </div>
       </div>
@@ -332,6 +402,9 @@ export function DashboardView() {
 
       {/* Aurora Portfolio Insight */}
       <PortfolioInsight walletState={walletState} />
+
+      {/* Agent Autonomy Score */}
+      <AutonomyScore />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-3 gap-3 mb-4">

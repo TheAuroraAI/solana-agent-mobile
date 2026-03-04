@@ -21,6 +21,18 @@ export function getSolscanCluster(network: SolanaNetwork): string {
 }
 
 export function getRpcUrl(network: SolanaNetwork): string {
+  // Check localStorage for custom RPC (client-side only)
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('aurora-settings');
+      if (raw) {
+        const settings = JSON.parse(raw);
+        if (settings.customRpc && settings.customRpc.startsWith('http')) {
+          return settings.customRpc;
+        }
+      }
+    } catch { /* ignore */ }
+  }
   return network === 'mainnet' ? MAINNET_RPC : DEVNET_RPC;
 }
 

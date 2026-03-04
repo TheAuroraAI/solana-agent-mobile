@@ -5,7 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useSearchParams } from 'next/navigation';
 import {
   ShieldCheck, ShieldAlert, BellRing, ToggleLeft, ToggleRight,
-  RefreshCw, ChevronRight, Sparkles, Info,
+  RefreshCw, ChevronRight, Sparkles, Info, Plus, Send,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -224,10 +224,177 @@ export function PoliciesView() {
         ))}
       </div>
 
+      {/* Natural Language Policy Creator */}
+      <NaturalPolicyCreator onAdd={(policy) => {
+        const updated = [...policies, policy];
+        setPolicies(updated);
+        savePolicies(updated);
+        if (snapshot) {
+          setEvaluations(evaluatePolicies(updated, snapshot));
+        }
+      }} />
+
       {/* Footer note */}
       <p className="text-center text-gray-600 text-xs mt-6 px-4 leading-relaxed">
         Policies are evaluated locally against your wallet state. Aurora proposes actions — you approve every transaction.
       </p>
+    </div>
+  );
+}
+
+function NaturalPolicyCreator({ onAdd }: { onAdd: (policy: Policy) => void }) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [parsing, setParsing] = useState(false);
+
+  const examples = [
+    'Keep at least 30% stablecoins',
+    'Stake any SOL above 10',
+    'Alert me if portfolio drops 25%',
+    'Never let SOL exceed 60% of portfolio',
+  ];
+
+  function parseNaturalPolicy(text: string): Policy | null {
+    const lower = text.toLowerCase();
+
+    // "keep X% stablecoins/usdc"
+    const stableMatch = lower.match(/(?:keep|maintain|hold)\s+(?:at\s+least\s+)?(\d+)%?\s*(?:in\s+)?(?:stablecoin|stable|usdc|usdt)/);
+    if (stableMatch) {
+      const pct = parseInt(stableMatch[1]);
+      return {
+        id: `custom_${Date.now()}`,
+        name: `Maintain ${pct}% Stablecoins`,
+        description: text,
+        trigger: 'percentage',
+        enabled: true,
+        params: { targetPct: pct, asset: 'stablecoin' },
+        actionType: 'swap',
+        actionLabel: 'Swap SOL → USDC',
+      };
+    }
+
+    // "stake sol above X"
+    const stakeMatch = lower.match(/stake\s+(?:any\s+)?(?:sol\s+)?(?:above|over|beyond)\s+(\d+)/);
+    if (stakeMatch) {
+      const threshold = parseInt(stakeMatch[1]);
+      return {
+        id: `custom_${Date.now()}`,
+        name: `Stake SOL Above ${threshold}`,
+        description: text,
+        trigger: 'balance',
+        enabled: true,
+        params: { threshold, protocol: 'Jito' },
+        actionType: 'stake',
+        actionLabel: 'Stake Excess SOL',
+      };
+    }
+
+    // "alert/notify on X% drawdown/drop"
+    const drawdownMatch = lower.match(/(?:alert|notify|warn)\s+(?:me\s+)?(?:if|on|when)\s+(?:portfolio\s+)?(?:drop|drawdown|fall|decline)s?\s+(\d+)%?/);
+    if (drawdownMatch) {
+      const pct = parseInt(drawdownMatch[1]);
+      return {
+        id: `custom_${Date.now()}`,
+        name: `Alert on ${pct}% Drawdown`,
+        description: text,
+        trigger: 'drawdown',
+        enabled: true,
+        params: { pct },
+        actionType: 'alert',
+        actionLabel: 'Review Portfolio',
+      };
+    }
+
+    // "cap/limit/never let SOL exceed X%"
+    const capMatch = lower.match(/(?:cap|limit|never\s+let)\s+sol\s+(?:at|to|exceed|above)\s+(\d+)%?/);
+    if (capMatch) {
+      const maxPct = parseInt(capMatch[1]);
+      return {
+        id: `custom_${Date.now()}`,
+        name: `Cap SOL at ${maxPct}%`,
+        description: text,
+        trigger: 'percentage',
+        enabled: true,
+        params: { maxPct, asset: 'SOL' },
+        actionType: 'rebalance',
+        actionLabel: 'Rebalance Now',
+      };
+    }
+
+    return null;
+  }
+
+  function handleSubmit() {
+    if (!input.trim()) return;
+    setParsing(true);
+    const policy = parseNaturalPolicy(input);
+    if (policy) {
+      onAdd(policy);
+      setInput('');
+      setOpen(false);
+    }
+    setParsing(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full mt-4 flex items-center justify-center gap-2 py-3 text-sm text-violet-400 hover:text-violet-300 glass rounded-2xl transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        Create Policy
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-4 glass rounded-2xl p-4">
+      <p className="text-white text-sm font-semibold mb-1">Create a Policy</p>
+      <p className="text-gray-400 text-xs mb-3">Describe your rule in plain English:</p>
+
+      <div className="flex gap-2 mb-3">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          placeholder='e.g. "Keep at least 30% stablecoins"'
+          className="flex-1 bg-gray-800/60 border border-gray-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/50 transition-colors"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!input.trim() || parsing}
+          className="w-10 h-10 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+        >
+          <Send className="w-4 h-4 text-white" />
+        </button>
+      </div>
+
+      {input.trim() && !parseNaturalPolicy(input) && (
+        <p className="text-amber-400/80 text-xs mb-3">
+          Try a simpler format like the examples below.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        {examples.map((ex) => (
+          <button
+            key={ex}
+            onClick={() => setInput(ex)}
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={() => { setOpen(false); setInput(''); }}
+        className="w-full mt-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+      >
+        Cancel
+      </button>
     </div>
   );
 }

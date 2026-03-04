@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/solana';
 import { getJupiterSwapTx, resolveOutputMint, SOL_MINT } from '@/lib/jupiter';
 import { logAction, updateActionOutcome } from '@/lib/action-log';
+import { loadSettings } from '@/lib/settings';
 
 const NETWORK = getNetwork();
 
@@ -236,7 +237,10 @@ function ActionCard({ action, onApprove, onReject }: {
           </button>
           <div className="w-px bg-gray-800/50" />
           <button
-            onClick={() => onApprove(action.id)}
+            onClick={() => {
+              navigator.vibrate?.(50);
+              onApprove(action.id);
+            }}
             className="flex-1 py-3 text-sm text-emerald-400 hover:bg-emerald-500/5 transition-colors flex items-center justify-center gap-2 font-medium"
           >
             <CheckCircle className="w-4 h-4" />
@@ -263,10 +267,16 @@ export function ActionsView() {
     setLoading(true);
     try {
       const walletState = await getWalletState(publicKey.toString(), NETWORK);
+      const settings = loadSettings();
       const res = await fetch('/api/actions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletState }),
+        body: JSON.stringify({
+          walletState,
+          actionsModel: settings.actionsModel,
+          anthropicApiKey: settings.anthropicApiKey || undefined,
+          defiProtocols: settings.defiProtocols,
+        }),
       });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();

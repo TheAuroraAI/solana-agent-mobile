@@ -220,7 +220,7 @@ export function WalletClone({ demo }: { demo: boolean }) {
           </p>
           <div className="flex gap-2">
             <a
-              href={`/actions?demo=true&clone=${encodeURIComponent(cloneTarget.address)}`}
+              href={`/chat?demo=true&prompt=${encodeURIComponent(`Clone the portfolio of wallet ${cloneTarget.address} (${cloneTarget.label}). Their allocation: ${cloneTarget.solPct}% SOL${cloneTarget.tokens.slice(0, 3).map(t => `, ${t.pct}% ${t.symbol}`).join('')}. Generate specific swap actions to match this allocation.`)}`}
               className="flex-1 text-center text-xs bg-violet-500 text-white px-3 py-2 rounded-lg font-medium hover:bg-violet-600 transition-colors"
             >
               Generate Actions

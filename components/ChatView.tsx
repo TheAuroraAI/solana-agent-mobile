@@ -26,6 +26,30 @@ const SUGGESTED_PROMPTS = [
   'Create a strategy to grow my portfolio with moderate risk',
 ];
 
+function renderMarkdown(text: string): React.ReactNode {
+  // Split by lines, handle **bold**, bullet points, and line breaks
+  return text.split('\n').map((line, i) => {
+    // Handle bullet points
+    const isBullet = /^\s*[-•*]\s/.test(line);
+    const content = isBullet ? line.replace(/^\s*[-•*]\s/, '') : line;
+
+    // Handle **bold**
+    const parts = content.split(/(\*\*[^*]+\*\*)/g);
+    const rendered = parts.map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+
+    if (isBullet) {
+      return <div key={i} className="flex gap-1.5 mt-0.5"><span className="text-violet-400 flex-shrink-0">•</span><span>{rendered}</span></div>;
+    }
+    if (line === '') return <div key={i} className="h-2" />;
+    return <div key={i}>{rendered}</div>;
+  });
+}
+
 function loadMessages(): Message[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -56,6 +80,10 @@ export function ChatView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-send prompt from query param (e.g. from Clone Portfolio)
+  const initialPrompt = searchParams.get('prompt');
+  const promptSentRef = useRef(false);
 
   useEffect(() => {
     if (isDemo) return;
@@ -147,6 +175,14 @@ export function ChatView() {
       setIsLoading(false);
     }
   }, [messages, walletState, isLoading]);
+
+  // Auto-send prompt from query param (e.g. from Clone Portfolio) — must be after sendMessage
+  useEffect(() => {
+    if (initialPrompt && !promptSentRef.current && walletState && !isLoading) {
+      promptSentRef.current = true;
+      sendMessage(initialPrompt);
+    }
+  }, [initialPrompt, walletState, isLoading, sendMessage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,13 +276,15 @@ export function ChatView() {
             </div>
             <div
               className={clsx(
-                'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
+                'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
                 msg.role === 'user'
-                  ? 'bg-violet-600 text-white rounded-tr-sm'
+                  ? 'bg-violet-600 text-white rounded-tr-sm whitespace-pre-wrap'
                   : 'glass text-gray-100 rounded-tl-sm'
               )}
             >
-              {msg.content || (
+              {msg.content ? (
+                msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content
+              ) : (
                 <div className="flex gap-1 items-center h-5">
                   <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400" />
                   <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400" />

@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 
 interface WalletState {
   address: string;
@@ -38,11 +39,15 @@ interface AgentAction {
 
 export async function POST(req: Request) {
   try {
-    const { walletState }: { walletState: WalletState } = await req.json();
+    const { walletState, actionsModel, anthropicApiKey, defiProtocols }:
+      { walletState: WalletState; actionsModel?: string; anthropicApiKey?: string; defiProtocols?: string[] } = await req.json();
 
     if (!walletState) {
       return Response.json({ error: 'walletState required' }, { status: 400 });
     }
+
+    const useAnthropic = typeof anthropicApiKey === 'string' && anthropicApiKey.startsWith('sk-ant-') &&
+      typeof actionsModel === 'string' && actionsModel.startsWith('claude');
 
     const groq = process.env.GROQ_API_KEY
       ? new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -113,9 +118,43 @@ Return ONLY a valid JSON array, no markdown wrapping:
   }
 ]`;
 
+    const protocolList = Array.isArray(defiProtocols) && defiProtocols.length > 0
+      ? defiProtocols.join(', ')
+      : 'Jito, Marinade, Jupiter';
+    const fullPrompt = systemPrompt + `\n\nENABLED DEFI PROTOCOLS: ${protocolList}\nOnly suggest the above protocols.\n\nReturn a JSON object with key "actions" containing the array.`;
+
     // Request with JSON mode for structured output
     let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[] = [];
     let parseSuccess = false;
+
+    if (useAnthropic && anthropicApiKey) {
+      // Use Anthropic Claude model
+      try {
+        const anthropic = new Anthropic({ apiKey: anthropicApiKey, dangerouslyAllowBrowser: false });
+        const modelMap: Record<string, string> = {
+          'claude-sonnet-4-6': 'claude-sonnet-4-6',
+          'claude-haiku-4-5-20251001': 'claude-haiku-4-5-20251001',
+          'claude-opus-4-6': 'claude-opus-4-6',
+        };
+        const claudeModel = modelMap[actionsModel ?? ''] ?? 'claude-haiku-4-5-20251001';
+        const msg = await anthropic.messages.create({
+          model: claudeModel,
+          max_tokens: 2048,
+          system: fullPrompt,
+          messages: [{ role: 'user', content: 'Generate personalized actions for this wallet. Return ONLY valid JSON.' }],
+        });
+        const text = msg.content[0]?.type === 'text' ? msg.content[0].text : '';
+        let cleaned = text.trim();
+        if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
+        }
+        const parsed = JSON.parse(cleaned);
+        rawActions = Array.isArray(parsed) ? parsed : (parsed.actions ?? [parsed]);
+        if (rawActions.length > 0) parseSuccess = true;
+      } catch {
+        // Fall through to Groq
+      }
+    }
 
     for (let attempt = 0; attempt < 2 && !parseSuccess && groq; attempt++) {
       try {
@@ -124,7 +163,7 @@ Return ONLY a valid JSON array, no markdown wrapping:
           max_tokens: 2048,
           response_format: { type: 'json_object' },
           messages: [
-            { role: 'system', content: systemPrompt + '\n\nReturn a JSON object with key "actions" containing the array.' },
+            { role: 'system', content: fullPrompt },
             { role: 'user', content: attempt === 0
               ? 'Generate personalized actions for this wallet.'
               : 'Generate 3 simple actions for this wallet as a JSON object with "actions" array.' },
@@ -133,7 +172,6 @@ Return ONLY a valid JSON array, no markdown wrapping:
 
         const text = completion.choices[0]?.message?.content || '';
         let cleaned = text.trim();
-        // Strip markdown code blocks if present
         if (cleaned.startsWith('```')) {
           cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```$/, '').trim();
         }
@@ -143,7 +181,6 @@ Return ONLY a valid JSON array, no markdown wrapping:
         if (rawActions.length > 0) parseSuccess = true;
       } catch {
         if (attempt === 1) {
-          // Final fallback after 2 attempts
           rawActions = [];
         }
       }
