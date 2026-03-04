@@ -87,7 +87,7 @@ function PortfolioSparkline({ totalUsd }: { totalUsd: number }) {
   return (
     <div className="glass rounded-2xl p-3 mb-4">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-gray-400 text-xs">24h Portfolio</span>
+        <span className="text-gray-400 text-xs">24h Portfolio <span className="text-gray-600">(simulated)</span></span>
         <span className={clsx('text-xs font-medium', isUp ? 'text-emerald-400' : 'text-red-400')}>
           {isUp ? '+' : ''}{change.toFixed(2)}%
         </span>

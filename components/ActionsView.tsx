@@ -585,9 +585,16 @@ export function ActionsView() {
               </div>
             </div>
 
-            <p className="text-gray-500 text-xs mb-5 leading-relaxed">
+            <p className="text-gray-500 text-xs mb-3 leading-relaxed">
               {previewAction.details.reasoning?.slice(0, 150)}
             </p>
+
+            <div className="flex items-start gap-2 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl mb-5">
+              <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <p className="text-yellow-200/60 text-[10px] leading-relaxed">
+                Not financial advice. Rates are estimates. You are responsible for verifying all details before signing.
+              </p>
+            </div>
 
             <div className="flex gap-3">
               <button

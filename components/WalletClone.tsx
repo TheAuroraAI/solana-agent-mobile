@@ -208,6 +208,7 @@ export function WalletClone({ demo }: { demo: boolean }) {
 
       <p className="text-gray-500 text-xs mb-3">
         Mirror top wallet allocations. One tap to match their positions.
+        {demo && <span className="text-gray-600"> (Demo wallets — labels are illustrative, not verified.)</span>}
       </p>
 
       {/* Clone confirmation banner */}
