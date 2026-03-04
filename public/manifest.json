@@ -23,5 +23,43 @@
     }
   ],
   "categories": ["finance", "utilities"],
-  "screenshots": []
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Aurora Agent — Autonomous Solana Wallet Dashboard"
+    },
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Aurora Agent — Whale Watch & Copy Trading"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Wallet Dashboard",
+      "short_name": "Dashboard",
+      "description": "View portfolio and balances",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agent Chat",
+      "short_name": "Chat",
+      "description": "Talk to your AI agent",
+      "url": "/chat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Whale Watch",
+      "short_name": "Whales",
+      "description": "Track large on-chain transactions",
+      "url": "/whales",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

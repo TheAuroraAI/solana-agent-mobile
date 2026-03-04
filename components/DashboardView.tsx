@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
   FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
-  Calendar, ChevronRight, ScanLine,
+  Calendar, ChevronRight, ScanLine, Image as ImageIcon,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { BriefingCard } from './BriefingCard';
@@ -899,6 +899,22 @@ export function DashboardView() {
             <div>
               <p className="text-white text-sm font-semibold">Token Unlocks</p>
               <p className="text-gray-400 text-xs">8 upcoming events · tap to explore</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+        </div>
+      </Link>
+
+      {/* NFT Gallery — teaser */}
+      <Link href={isDemo ? '/nfts?demo=true' : '/nfts'} className="block mb-3">
+        <div className="glass rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+              <ImageIcon className="w-4 h-4 text-violet-400" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-semibold">NFT Gallery</p>
+              <p className="text-gray-400 text-xs">Your Solana collectibles · tap to browse</p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />

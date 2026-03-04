@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -17,6 +17,7 @@ const moreNav = [
   { href: '/search', label: 'Token Search', icon: Search, desc: 'Search 1,000+ verified Solana tokens' },
   { href: '/trending', label: 'Trending', icon: Flame, desc: 'Top Solana gainers & volume leaders' },
   { href: '/history', label: 'Tx History', icon: Clock, desc: 'On-chain transaction history + analytics' },
+  { href: '/nfts', label: 'NFT Gallery', icon: Image, desc: 'Your Solana collectibles & collections' },
   { href: '/store', label: 'dApp Store', icon: Store, desc: 'Seeker-verified Solana dApps' },
   { href: '/policies', label: 'Policies', icon: Shield, desc: 'Portfolio rules & automation' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
