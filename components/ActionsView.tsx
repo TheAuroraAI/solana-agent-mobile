@@ -286,7 +286,7 @@ export function ActionsView() {
         // Log to persistent action history
         for (const a of data.actions) {
           logAction({
-            id: `${Date.now()}-${a.id}`,
+            id: a.id,
             timestamp: new Date().toISOString(),
             type: a.type,
             title: a.title,

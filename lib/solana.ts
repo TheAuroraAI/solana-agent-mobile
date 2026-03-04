@@ -101,7 +101,7 @@ export async function getWalletState(
   publicKeyStr: string,
   network: 'devnet' | 'mainnet' = 'devnet'
 ): Promise<WalletState> {
-  const rpc = network === 'devnet' ? DEVNET_RPC : MAINNET_RPC;
+  const rpc = getRpcUrl(network);
   const connection = new Connection(rpc, 'confirmed');
   const publicKey = new PublicKey(publicKeyStr);
 

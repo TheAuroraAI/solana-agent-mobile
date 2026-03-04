@@ -265,7 +265,7 @@ Return ONLY a valid JSON array, no markdown wrapping:
     const actions: AgentAction[] = rawActions.map((action, index) => ({
       ...action,
       type: (['stake', 'swap', 'alert', 'analysis', 'transfer'].includes(action.type) ? action.type : 'analysis') as AgentAction['type'],
-      id: String(index + 1),
+      id: `action-${now}-${index}`,
       status: 'pending' as const,
       createdAt: new Date(now - index * 1000 * 60 * 2).toISOString(),
     }));

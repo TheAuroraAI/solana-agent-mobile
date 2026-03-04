@@ -61,7 +61,7 @@ function typeColor(type: WhaleAlert['type']) {
   return 'text-gray-400';
 }
 
-function WhaleCard({ alert, isNew }: { alert: WhaleAlert; isNew: boolean }) {
+function WhaleCard({ alert, isNew, demo }: { alert: WhaleAlert; isNew: boolean; demo: boolean }) {
   const [copied, setCopied] = useState(false);
 
   const copyWallet = async () => {
@@ -243,6 +243,7 @@ export function WhaleAlerts({ demo }: { demo: boolean }) {
               key={alert.signature}
               alert={alert}
               isNew={newIds.has(alert.signature)}
+              demo={demo}
             />
           ))}
         </div>
