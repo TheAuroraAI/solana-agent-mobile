@@ -12,6 +12,7 @@ import {
 import { PriceTicker } from './PriceTicker';
 import { ActionLogWidget } from './ActionLogWidget';
 import { PullToRefresh } from './PullToRefresh';
+import { NetworkStatus } from './NetworkStatus';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -433,6 +434,9 @@ export function DashboardView() {
           </div>
         </div>
       )}
+
+      {/* Network Status */}
+      <NetworkStatus />
 
       {/* Live Price Ticker */}
       <PriceTicker demo={isDemo} />
