@@ -253,16 +253,46 @@ function ActionCard({ action, onApprove, onReject }: {
   );
 }
 
+function buildCopyTradeAction(walletAddr: string, token: string): AgentAction {
+  const shortAddr = `${walletAddr.slice(0, 4)}...${walletAddr.slice(-4)}`;
+  const safeToken = token.replace(/[^A-Z0-9a-z]/g, '').slice(0, 10) || 'TOKEN';
+  return {
+    id: `copy-trade-${Date.now()}`,
+    type: 'swap',
+    title: `Copy whale trade: Buy ${safeToken}`,
+    description: `Mirror the whale at ${shortAddr} — swap 0.5 SOL → ${safeToken} via Jupiter.`,
+    details: {
+      reasoning: `A whale wallet (${shortAddr}) just made a large ${safeToken} purchase. Aurora proposes copying this trade: swap 0.5 SOL → ${safeToken} at the current market price via Jupiter aggregator. This is a speculative action — only approve if you've researched ${safeToken} independently.`,
+      risk: 'high',
+      estimatedGas: '~0.000005 SOL',
+      amount: 0.5,
+      protocol: 'Jupiter',
+    },
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export function ActionsView() {
   const { publicKey, sendTransaction, connected } = useWallet();
   const searchParams = useSearchParams();
   const isDemo = searchParams.get('demo') === 'true';
-  const [actions, setActions] = useState<AgentAction[]>(isDemo ? DEMO_ACTIONS : FALLBACK_ACTIONS);
+  const copyWallet = searchParams.get('copy') ?? '';
+  const copyToken = searchParams.get('token') ?? '';
+  const isCopyTrade = !!(copyWallet && copyToken);
+
+  const initialActions = isCopyTrade
+    ? [buildCopyTradeAction(copyWallet, copyToken), ...FALLBACK_ACTIONS]
+    : isDemo
+    ? DEMO_ACTIONS
+    : FALLBACK_ACTIONS;
+
+  const [actions, setActions] = useState<AgentAction[]>(initialActions);
   const [executing, setExecuting] = useState<string | null>(null);
   const [txResult, setTxResult] = useState<{ success: boolean; sig?: string; error?: string } | null>(null);
   const [previewAction, setPreviewAction] = useState<AgentAction | null>(null);
   const [loading, setLoading] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState(isDemo);
+  const [aiGenerated, setAiGenerated] = useState(isDemo || isCopyTrade);
 
   const generateActions = useCallback(async () => {
     if (!publicKey || !connected) return;
@@ -429,6 +459,20 @@ export function ActionsView() {
 
   return (
     <div className="safe-top px-4 pt-6 pb-4">
+      {/* Copy Trade Banner */}
+      {isCopyTrade && (
+        <div className="mb-4 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-3 flex items-start gap-2">
+          <ArrowRightLeft className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-orange-400 text-xs font-semibold">Copy Trade Mode</p>
+            <p className="text-gray-400 text-xs mt-0.5">
+              Mirroring {copyWallet.slice(0, 6)}…{copyWallet.slice(-4)} — {copyToken} trade pre-loaded below.
+              High risk: verify before approving.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-9 h-9 rounded-xl bg-yellow-500/20 flex items-center justify-center">
@@ -439,6 +483,8 @@ export function ActionsView() {
           <p className="text-gray-400 text-xs">
             {loading
               ? 'Aurora is analyzing your wallet...'
+              : isCopyTrade
+              ? `Copy trade ready — review before approving`
               : isDemo
               ? `${pendingCount} demo action${pendingCount !== 1 ? 's' : ''} — AI-generated proposals`
               : aiGenerated
