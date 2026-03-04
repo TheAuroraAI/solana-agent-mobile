@@ -77,7 +77,7 @@ export function LandingPage() {
           Your autonomous AI wallet manager for Solana. Analyze, strategize, execute.
         </p>
         {/* Live SOL price */}
-        {solPrice && (
+        {solPrice != null && solPrice > 0 && isFinite(solPrice) && (
           <div className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-emerald-400 text-xs font-medium">SOL ${solPrice.toFixed(2)}</span>

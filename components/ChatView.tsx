@@ -239,7 +239,7 @@ export function ChatView() {
         <div className="flex-1">
           <h1 className="text-white font-semibold text-sm">Aurora Agent</h1>
           <p className="text-gray-500 text-xs">
-            {isDemo ? 'Demo — sample portfolio' : walletState ? `Managing ${walletState.solBalance.toFixed(3)} SOL` : 'Connecting...'}
+            {isDemo ? 'Demo — sample portfolio' : walletState ? `Managing ${isFinite(walletState.solBalance) ? walletState.solBalance.toFixed(3) : '?'} SOL` : 'Connecting...'}
           </p>
           <p className="text-gray-600 text-xs mt-0.5">
             Prices/APYs not live — data may be outdated. Production would use real-time feeds + advanced AI.

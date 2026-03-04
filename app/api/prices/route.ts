@@ -10,7 +10,7 @@ const TOKEN_MINTS: Record<string, string> = {
   WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
   RAY: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
   PYTH: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3',
-  JitoSOL: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+  jitoSOL: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
   mSOL: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
   ORCA: 'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE',
 };
@@ -117,10 +117,12 @@ export async function GET() {
   // Static fallback (updated March 2026)
   return NextResponse.json({
     prices: {
-      SOL: { usd: 91, change24h: 0 },
-      JUP: { usd: 0.72, change24h: 0 },
-      BONK: { usd: 0.000018, change24h: 0 },
-      WIF: { usd: 1.1, change24h: 0 },
+      SOL: { usd: 90, change24h: 0 },
+      JUP: { usd: 0.19, change24h: 0 },
+      BONK: { usd: 0.000006, change24h: 0 },
+      WIF: { usd: 0.8, change24h: 0 },
+      jitoSOL: { usd: 114, change24h: 0 },
+      mSOL: { usd: 110, change24h: 0 },
     },
     source: 'fallback',
     ts: Date.now(),

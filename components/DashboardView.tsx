@@ -40,10 +40,10 @@ const NETWORK = getNetwork();
 const TOKEN_USD_PRICES: Record<string, number> = {
   USDC: 1,
   USDT: 1,
-  jitoSOL: 95, mSOL: 95, bSOL: 95, stSOL: 95, // LSTs approx SOL price (~$91 + yield)
-  JUP: 0.72,
-  BONK: 0.000018,
-  WIF: 1.08,
+  jitoSOL: 114, mSOL: 110, bSOL: 110, stSOL: 110, // LSTs approx SOL price (~$90 + yield)
+  JUP: 0.19,
+  BONK: 0.000006,
+  WIF: 0.8,
   SKR: 0.024,
   RAY: 1.8,
   ORCA: 2.2,
@@ -64,8 +64,12 @@ function estimateTokenUsd(symbol: string, uiAmount: number, livePrices: Record<s
 }
 
 function computeTotalUsd(ws: WalletState, livePrices: Record<string, number>): number {
+  // Use live SOL price if available, otherwise fall back to the value computed at wallet fetch time
+  const solUsd = livePrices['SOL'] && livePrices['SOL'] > 0
+    ? ws.solBalance * livePrices['SOL']
+    : ws.solBalanceUsd;
   const tokenValue = ws.tokens.reduce((sum, t) => sum + estimateTokenUsd(t.symbol, t.uiAmount, livePrices), 0);
-  return ws.solBalanceUsd + tokenValue;
+  return solUsd + tokenValue;
 }
 
 // SVG sparkline chart for portfolio value with optional real 24h change
@@ -201,9 +205,13 @@ function HealthScoreRing({ score, label, color }: { score: number; label: string
 }
 
 function PortfolioInsight({ walletState, totalUsd, livePrices }: { walletState: WalletState; totalUsd: number; livePrices: Record<string, number> }) {
+  // Use live SOL price if available for accurate USD value
+  const solUsd = livePrices['SOL'] && livePrices['SOL'] > 0
+    ? walletState.solBalance * livePrices['SOL']
+    : walletState.solBalanceUsd;
   // Use the full computed totalUsd (which uses estimated/live prices for all known tokens)
-  const safeTotalUsd = totalUsd > 0 ? totalUsd : walletState.solBalanceUsd;
-  const solPct = Math.round((walletState.solBalanceUsd / safeTotalUsd) * 100);
+  const safeTotalUsd = totalUsd > 0 ? totalUsd : solUsd;
+  const solPct = Math.round((solUsd / safeTotalUsd) * 100);
 
   const stableUsd = walletState.tokens
     .filter((t) => t.symbol === 'USDC' || t.symbol === 'USDT')
@@ -499,8 +507,11 @@ export function DashboardView() {
     let pnl = 0;
     // SOL position
     const solChange = priceChanges24h['SOL'];
-    if (typeof solChange === 'number' && walletState.solBalanceUsd > 0) {
-      pnl += walletState.solBalanceUsd * (solChange / (100 + solChange));
+    if (typeof solChange === 'number' && isFinite(solChange) && solChange > -100) {
+      const solUsd = livePrices['SOL'] && livePrices['SOL'] > 0
+        ? walletState.solBalance * livePrices['SOL']
+        : walletState.solBalanceUsd;
+      if (solUsd > 0) pnl += solUsd * (solChange / (100 + solChange));
     }
     // Token positions
     for (const token of walletState.tokens) {
@@ -513,6 +524,7 @@ export function DashboardView() {
     }
     if (totalUsd === 0) return null;
     const pct = (pnl / (totalUsd - pnl)) * 100;
+    if (!isFinite(pct)) return null;
     return { usd: pnl, pct };
   }, [walletState, priceChanges24h, livePrices, totalUsd]);
 

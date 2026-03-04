@@ -214,7 +214,7 @@ export async function getSolPrice(): Promise<number> {
   } catch {
     // Fall through to cached/fallback
   }
-  return _solPriceCache?.price ?? 91;
+  return _solPriceCache?.price ?? 90;
 }
 
 export function formatSol(amount: number): string {
@@ -239,7 +239,7 @@ export function truncateAddress(address: string): string {
 export const DEMO_WALLET_STATE: WalletState = {
   address: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
   solBalance: 12.847,
-  solBalanceUsd: 1169.08, // ~$91/SOL
+  solBalanceUsd: 1156.23, // ~$90/SOL
   tokens: [
     {
       mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -265,9 +265,9 @@ export const DEMO_WALLET_STATE: WalletState = {
     {
       mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
       symbol: 'BONK',
-      amount: 50000000000000,
+      amount: 5000000000000,
       decimals: 5,
-      uiAmount: 500000000,
+      uiAmount: 50000000,
     },
     {
       mint: SKR_MINT,
