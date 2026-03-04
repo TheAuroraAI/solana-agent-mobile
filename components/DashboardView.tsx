@@ -826,9 +826,14 @@ export function DashboardView() {
 
       {/* Recent Transactions */}
       <div>
-        <h2 className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-3">
-          Recent Activity
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-gray-400 text-xs font-medium uppercase tracking-wider">
+            Recent Activity
+          </h2>
+          <Link href="/history" className="text-violet-400 text-xs flex items-center gap-1 hover:text-violet-300">
+            View all <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
         {walletState.recentTransactions.length === 0 ? (
           <div className="glass rounded-2xl p-6 text-center">
             <p className="text-gray-500 text-sm">No recent transactions</p>
