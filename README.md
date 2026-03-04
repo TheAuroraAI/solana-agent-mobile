@@ -167,3 +167,24 @@ Click "Try Demo" to see Aurora in action without connecting a wallet.
 - **Non-custodial agent**: Aurora proposes but never holds keys — all signing happens in Phantom
 - **SKR-native**: Built for Seeker holders with deep Guardian staking knowledge and SKR balance tracking
 - **Installable PWA**: Service worker with offline caching, standalone mode, portrait lock
+
+### Mobile-First UX Features
+
+| Feature | Description |
+|---------|-------------|
+| **Slide to Sign** | Touch gesture replaces buttons for transaction confirmation — more secure and tactile |
+| **Pull to Refresh** | Swipe down to refresh wallet state and prices |
+| **Bottom Sheet Nav** | Native iOS/Android-style navigation with expandable sheet |
+| **Haptic Feedback** | Vibration on actions, confirmations, and navigation |
+| **Offline Detection** | Real-time banner when connection drops |
+| **PWA Install Prompt** | Native install prompt for Add to Home Screen |
+| **NFA Disclaimer** | Dismissable "Not Financial Advice" banner on first launch + in transaction modal |
+| **Skeleton Loading** | Shimmer placeholders during data fetch |
+| **Page Transitions** | Smooth animated transitions between views |
+| **Portrait Lock** | Viewport locked for consistent mobile layout |
+| **Safe Area Support** | Notch-aware padding for Seeker and modern phones |
+| **Solana Mobile Wallet Adapter** | Native Seeker/Saga wallet connection |
+| **Network Status Widget** | Live TPS, slot height, block time from Solana RPC |
+| **Transaction Preview** | Full details (amount, protocol, APY, fees, risk, slippage) before signing |
+| **Visibility-Aware Polling** | Price tickers and whale alerts pause when tab is hidden |
+| **Error States** | Graceful failure with retry on all data-fetching components |
