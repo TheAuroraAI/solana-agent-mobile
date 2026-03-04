@@ -104,34 +104,44 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 ## Demo Flow
 
 1. **Visit the app** → Choose "Connect Phantom" or "Try Demo"
-2. **Dashboard** → See your balance, token holdings (including SKR), and Aurora's portfolio insight with risk score
+2. **Dashboard** → Balance, token holdings (SKR included), AI daily briefing, 24h P&L, health score
 3. **Agent Chat** → Ask about DeFi strategy, SKR Guardian staking, yield opportunities, or risk management
-4. **Actions** → Review AI-generated proposals: staking, swaps, alerts — each with reasoning and risk level
-5. **Approve** → Tap "Sign & Send" — Aurora builds a Jupiter swap transaction, Phantom signs it, executes on-chain
-6. **Verify** → Confirmed transaction with Solscan link
-7. **Yield** → Browse DeFi opportunities including SKR Guardian Staking (20.2% APY) with detailed delegation guide
+4. **Actions** → AI-generated proposals: staking, swaps, alerts — each with reasoning and risk level
+5. **Rebalance** → Set target allocations (sliders), Aurora calculates exact trades needed, routes to Actions
+6. **Whale Watch** → Spot large transactions → tap "Copy Trade" → swap pre-loaded in Actions, ready to sign
+7. **Approve** → Tap "Sign & Send" — Aurora builds a Jupiter swap transaction, Phantom signs it, executes on-chain
+8. **Yield** → Browse DeFi opportunities including SKR Guardian Staking (20.2% APY) with delegation guide
 
 ## Architecture
 
 ```
-Browser (Mobile PWA)
+Browser (Mobile PWA — 17 pages)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
-├── Dashboard → Portfolio + AI Briefing + 24h P&L + Allocation Chart + Insight Card
+├── Dashboard → Portfolio + 7d Chart + AI Briefing + 24h P&L + Health Score + Insight
 ├── Agent Chat → Streaming AI (Claude Sonnet 4.6 or Groq) with DeFi + SKR knowledge
-├── Actions → AI Proposals: Stake/Swap/Analysis/Alert (Haiku 4.5 or Groq)
-├── Whales → Whale wallet tracker with clone functionality
+├── Actions → AI Proposals: Stake/Swap/Analysis/Alert + Copy Trade mode (Haiku 4.5 or Groq)
+├── Rebalance → Target allocation sliders + auto trade plan → routes to Actions for signing
+├── Blinks → Solana Actions executor — paste any solana-action: URL, execute in-app
+├── Whales → Real-time whale tracker with "Copy Trade" one-tap swap pre-fill
+├── NFTs → NFT gallery with collection filters, floor prices, grid/list views
 ├── History → On-chain tx history with protocol ID, token deltas, analytics
 ├── Trending → Solana ecosystem tokens ranked by volume, gainers, losers
-├── Search → 1000+ token search with live prices and CoinGecko data
-├── Unlocks → Token unlock calendar (upcoming vesting events)
+├── Search → 1000+ token search with live prices and DexScreener data
+├── Unlocks → Token unlock calendar (upcoming vesting events from DefiLlama)
 ├── Yield → DeFi yield board (live rates) + SKR Guardian Staking (featured)
 ├── dApp Store → Solana Mobile dApp discovery
-└── Settings → Network, RPC, AI models (BYOK), DeFi protocols, API keys
+├── Policies → Portfolio automation rules (natural language rule creator)
+├── Settings → Network, RPC, AI models (BYOK), DeFi protocols, API keys
+└── Policies → Automation rules evaluated against live wallet state
 
-API Routes (Next.js)
+API Routes (Next.js — 14 routes)
 ├── /api/agent → Streaming AI with portfolio + SKR staking context
 ├── /api/actions → DeFi action generation with protocol awareness
 ├── /api/briefing → AI-generated market briefing (Groq, 1h cache)
+├── /api/blinks → Solana Actions resolver + executor (GET metadata, POST execute)
+├── /api/clone → Smart wallet clone analysis
+├── /api/nfts → NFT fetching via Helius DAS + Magic Eden fallback
+├── /api/portfolio-history → 7-day portfolio value from CoinGecko SOL history
 ├── /api/prices → Live token prices + 24h change (CoinGecko, 60s cache)
 ├── /api/yields → Live APY rates: Jito, Marinade, Kamino (30m cache)
 ├── /api/whales → Whale wallet monitoring (Solana RPC)
@@ -176,7 +186,12 @@ Click "Try Demo" to see Aurora in action without connecting a wallet.
 - **Streaming AI**: Real-time token-by-token streaming from Groq (free) or Claude (BYOK) — responsive on mobile
 - **Non-custodial agent**: Aurora proposes but never holds keys — all signing happens in Phantom
 - **SKR-native**: Built for Seeker holders with deep Guardian staking knowledge and SKR balance tracking
-- **Installable PWA**: Service worker with offline caching, standalone mode, portrait lock
+- **Installable PWA**: Service worker with offline caching, standalone mode, portrait lock, app shortcuts
+- **Solana Actions (Blinks)**: Execute any `solana-action:` URL directly in Aurora — swap, stake, donate — without leaving the app
+- **NFT Gallery**: Browse your Solana collectibles with floor prices, collection analytics, and Magic Eden links
+- **7-Day Portfolio Chart**: Interactive SVG sparkline with hover tooltip using real CoinGecko historical SOL prices
+- **Copy Trading**: Spot whale moves on Whale Watch → tap "Copy Trade" → swap pre-loaded in Actions, ready to sign
+- **Portfolio Rebalance**: Set target allocations with sliders (Conservative/Balanced/Growth/Max Yield presets), Aurora calculates the exact trades needed and routes them to Actions for one-tap execution
 
 ### Mobile-First UX Features
 
