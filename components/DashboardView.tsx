@@ -329,6 +329,7 @@ export function DashboardView() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [seekerInfo, setSeekerInfo] = useState<SeekerInfo>({ isSeeker: false, features: [] });
+  const [showReceive, setShowReceive] = useState(false);
 
   const fetchWalletState = useCallback(async () => {
     if (!publicKey) return;
@@ -445,18 +446,27 @@ export function DashboardView() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-gray-400 text-xs">Solana {NETWORK === 'mainnet' ? 'Mainnet' : 'Devnet'}</p>
-          <button
-            onClick={copyAddress}
-            aria-label="Copy wallet address"
-            className="flex items-center gap-1.5 text-white font-mono text-sm mt-0.5"
-          >
-            {truncateAddress(walletState.address)}
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-gray-500" />
-            )}
-          </button>
+          <div className="flex items-center gap-2 mt-0.5">
+            <button
+              onClick={copyAddress}
+              aria-label="Copy wallet address"
+              className="flex items-center gap-1.5 text-white font-mono text-sm"
+            >
+              {truncateAddress(walletState.address)}
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-gray-500" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowReceive(true)}
+              aria-label="Show receive QR code"
+              className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+            >
+              Receive
+            </button>
+          </div>
         </div>
         <button
           onClick={fetchWalletState}
@@ -466,6 +476,54 @@ export function DashboardView() {
           <RefreshCw className={clsx('w-4 h-4', loading && 'animate-spin')} />
         </button>
       </div>
+
+      {/* Receive Modal */}
+      {showReceive && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowReceive(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-gray-900 rounded-t-3xl p-6 pb-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-700 rounded-full mx-auto mb-5" />
+            <h3 className="text-white text-lg font-bold text-center mb-4">Receive SOL</h3>
+            <div className="flex justify-center mb-4">
+              {/* QR code via free QR code API */}
+              <div className="w-48 h-48 bg-white rounded-2xl p-2 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=176x176&data=${walletState.address}`}
+                  alt={`QR code for ${walletState.address}`}
+                  width={176}
+                  height={176}
+                  className="rounded-lg"
+                />
+              </div>
+            </div>
+            <p className="text-gray-400 text-xs text-center font-mono break-all mb-4 px-2">{walletState.address}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={copyAddress}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors text-white text-sm"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              {typeof navigator !== 'undefined' && 'share' in navigator && (
+                <button
+                  onClick={() => navigator.share({ title: 'My Solana Address', text: walletState.address })}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-white text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Share
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance card */}
       <div className="glass rounded-3xl p-6 mb-4 bg-gradient-to-br from-violet-950/40 to-purple-950/20">
