@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -21,6 +21,7 @@ const moreNav = [
   { href: '/blinks', label: 'Blinks', icon: LinkIcon, desc: 'Execute any Solana Action (Blink)' },
   { href: '/store', label: 'dApp Store', icon: Store, desc: 'Seeker-verified Solana dApps' },
   { href: '/policies', label: 'Policies', icon: Shield, desc: 'Portfolio rules & automation' },
+  { href: '/rebalance', label: 'Rebalance', icon: Scale, desc: 'Set target allocations, Aurora generates trades' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
