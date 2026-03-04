@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { YieldBoard } from '@/components/YieldBoard';
+import { SwapWidget } from '@/components/SwapWidget';
 import { GenericSkeleton } from '@/components/Skeleton';
 
 export const metadata = { title: 'Yield — Aurora' };
@@ -16,6 +17,7 @@ export default function YieldPage() {
               Top DeFi yield strategies on Solana, ranked by APY and risk.
             </p>
           </div>
+          <SwapWidget />
           <YieldBoard />
         </div>
       </Suspense>
