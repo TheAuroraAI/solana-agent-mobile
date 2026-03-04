@@ -55,15 +55,23 @@ function computeTotalUsd(ws: WalletState): number {
   return ws.solBalanceUsd + tokenValue;
 }
 
-// Simple SVG sparkline chart for portfolio value
-function PortfolioSparkline({ totalUsd }: { totalUsd: number }) {
-  // Generate a smooth 24h price curve based on current value
+// SVG sparkline chart for portfolio value with optional real 24h change
+function PortfolioSparkline({ totalUsd, solChange24h }: { totalUsd: number; solChange24h: number | null }) {
+  const isReal = solChange24h != null;
+  const change = isReal ? solChange24h : 0;
+
+  // Reconstruct approximate 24h price curve from change %
+  const startValue = isReal && totalUsd > 0
+    ? totalUsd / (1 + change / 100)
+    : totalUsd * 0.98;
+
   const points = Array.from({ length: 24 }, (_, i) => {
-    const noise = Math.sin(i * 0.8) * 0.03 + Math.cos(i * 1.3) * 0.02 + Math.sin(i * 2.1) * 0.01;
-    const trend = (i / 24) * 0.04; // slight uptrend
-    return totalUsd * (0.96 + noise + trend);
+    const t = i / 23;
+    // Smooth interpolation with slight mid-journey noise
+    const base = startValue + (totalUsd - startValue) * t;
+    const noise = Math.sin(i * 1.3) * Math.abs(totalUsd - startValue) * 0.08;
+    return base + noise;
   });
-  // Make the last point the actual current value
   points[points.length - 1] = totalUsd;
 
   const min = Math.min(...points);
@@ -81,19 +89,20 @@ function PortfolioSparkline({ totalUsd }: { totalUsd: number }) {
 
   const linePath = `M${pathPoints.join(' L')}`;
   const areaPath = `${linePath} L${w - pad},${h} L${pad},${h} Z`;
-
-  const change = ((totalUsd - points[0]) / points[0]) * 100;
   const isUp = change >= 0;
 
   return (
     <div className="glass rounded-2xl p-3 mb-4">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-gray-400 text-xs">24h Portfolio <span className="text-gray-600">(simulated)</span></span>
+        <span className="text-gray-400 text-xs">
+          SOL 24h
+          {!isReal && <span className="text-gray-600 ml-1">(loading…)</span>}
+        </span>
         <span className={clsx('text-xs font-medium', isUp ? 'text-emerald-400' : 'text-red-400')}>
-          {isUp ? '+' : ''}{change.toFixed(2)}%
+          {isReal ? (isUp ? '+' : '') + change.toFixed(2) + '%' : '—'}
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-14" preserveAspectRatio="none" role="img" aria-label={`Portfolio chart: ${isUp ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}% over 24 hours`}>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-14" preserveAspectRatio="none" role="img" aria-label={isReal ? `SOL 24h: ${isUp ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}%` : 'Loading price data'}>
         <defs>
           <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={isUp ? '#34d399' : '#f87171'} stopOpacity="0.3" />
@@ -335,6 +344,7 @@ export function DashboardView() {
   const [sendAmount, setSendAmount] = useState('');
   const [showQrScan, setShowQrScan] = useState(false);
   const [qrScanError, setQrScanError] = useState<string | null>(null);
+  const [solChange24h, setSolChange24h] = useState<number | null>(null);
 
   // Parse Solana Pay URL: solana:<address>?amount=X&label=Y
   const parseSolanaPayUrl = useCallback((raw: string) => {
@@ -406,6 +416,18 @@ export function DashboardView() {
 
   useEffect(() => {
     setSeekerInfo(detectSeeker());
+  }, []);
+
+  // Fetch real SOL 24h price change
+  useEffect(() => {
+    fetch('/api/prices')
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.prices?.SOL?.change24h === 'number') {
+          setSolChange24h(d.prices.SOL.change24h);
+        }
+      })
+      .catch(() => {}); // silent fail — sparkline shows "loading…" if null
   }, []);
 
   useEffect(() => {
@@ -611,7 +633,7 @@ export function DashboardView() {
       </div>
 
       {/* Portfolio Sparkline */}
-      <PortfolioSparkline totalUsd={totalUsd} />
+      <PortfolioSparkline totalUsd={totalUsd} solChange24h={solChange24h} />
 
       {/* Portfolio Health Score */}
       <div className="glass rounded-2xl p-4 mb-4">

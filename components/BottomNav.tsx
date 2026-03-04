@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -14,6 +14,7 @@ const primaryNav = [
 ];
 
 const moreNav = [
+  { href: '/trending', label: 'Trending', icon: Flame, desc: 'Top Solana gainers & volume leaders' },
   { href: '/history', label: 'Tx History', icon: Clock, desc: 'On-chain transaction history + analytics' },
   { href: '/store', label: 'dApp Store', icon: Store, desc: 'Seeker-verified Solana dApps' },
   { href: '/policies', label: 'Policies', icon: Shield, desc: 'Portfolio rules & automation' },
