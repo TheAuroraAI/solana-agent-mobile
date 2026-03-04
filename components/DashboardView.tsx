@@ -33,22 +33,38 @@ import { checkAlerts, fireNotification } from '@/lib/alerts';
 const NETWORK = getNetwork();
 
 // Token price estimates (used for portfolio total when no live price feed)
+// These are rough fallbacks — real prices come from /api/prices
 const TOKEN_USD_PRICES: Record<string, number> = {
   USDC: 1,
   USDT: 1,
-  jitoSOL: 145, // ~SOL price + staking yield
-  mSOL: 145,
+  jitoSOL: 167, mSOL: 167, bSOL: 167, stSOL: 167, // LSTs approx SOL price
   JUP: 0.85,
   BONK: 0.000025,
+  WIF: 2.1,
   SKR: 0.001,
   RAY: 2.5,
   ORCA: 3.5,
+  PYTH: 0.38,
+  RENDER: 8.0,
+  HNT: 5.5,
+  ETH: 3800,
+  WEN: 0.00008,
+  MNGO: 0.02,
 };
 
+// liveTokenPrices is populated from /api/prices and injected into DashboardView
+let _liveTokenPrices: Record<string, number> = {};
+
+export function setLiveTokenPrices(prices: Record<string, number>) {
+  _liveTokenPrices = prices;
+}
+
 function estimateTokenUsd(symbol: string, uiAmount: number): number {
+  // Prefer live price from /api/prices
+  if (_liveTokenPrices[symbol] != null) return uiAmount * _liveTokenPrices[symbol];
   const price = TOKEN_USD_PRICES[symbol];
   if (price !== undefined) return uiAmount * price;
-  return 0; // Unknown tokens not counted
+  return 0; // Unknown tokens not counted (shown as "?" in UI)
 }
 
 function computeTotalUsd(ws: WalletState): number {
@@ -188,15 +204,15 @@ function HealthScoreRing({ score, label, color }: { score: number; label: string
   );
 }
 
-function PortfolioInsight({ walletState }: { walletState: WalletState }) {
-  const solPct = walletState.tokens.length === 0 ? 100 :
-    Math.round((walletState.solBalanceUsd / (walletState.solBalanceUsd +
-      walletState.tokens.reduce((sum, t) => {
-        if (t.symbol === 'USDC' || t.symbol === 'USDT') return sum + t.uiAmount;
-        return sum;
-      }, 0))) * 100);
+function PortfolioInsight({ walletState, totalUsd }: { walletState: WalletState; totalUsd: number }) {
+  // Use the full computed totalUsd (which uses estimated/live prices for all known tokens)
+  const safeTotalUsd = totalUsd > 0 ? totalUsd : walletState.solBalanceUsd;
+  const solPct = Math.round((walletState.solBalanceUsd / safeTotalUsd) * 100);
 
-  const stablePct = 100 - solPct;
+  const stableUsd = walletState.tokens
+    .filter((t) => t.symbol === 'USDC' || t.symbol === 'USDT')
+    .reduce((s, t) => s + t.uiAmount, 0);
+  const stablePct = Math.round((stableUsd / safeTotalUsd) * 100);
   const hasStaking = walletState.tokens.some(t =>
     ['jitoSOL', 'mSOL', 'bSOL', 'SKR'].includes(t.symbol));
 
@@ -243,37 +259,45 @@ function PortfolioInsight({ walletState }: { walletState: WalletState }) {
             ⚠️ AI analysis uses estimated rates. Verify current APYs before acting.
           </p>
 
-          {/* Portfolio allocation bar */}
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden flex">
-              <div
-                className="h-full bg-violet-500 rounded-l-full"
-                style={{ width: `${solPct}%` }}
-              />
-              {walletState.tokens.map((t, i) => {
-                const tokenColors = ['bg-blue-500', 'bg-emerald-500', 'bg-yellow-500', 'bg-pink-500'];
-                return (
-                  <div
-                    key={t.mint}
-                    className={clsx('h-full', tokenColors[i % tokenColors.length])}
-                    style={{ width: `${Math.max(stablePct / Math.max(walletState.tokens.length, 1), 2)}%` }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-violet-500" />
-              SOL {solPct}%
-            </span>
-            {walletState.tokens.slice(0, 3).map((t) => (
-              <span key={t.mint} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                {t.symbol}
-              </span>
-            ))}
-          </div>
+          {/* Portfolio allocation bar — each segment sized by real USD value */}
+          {(() => {
+            const tokenColors = ['bg-blue-500', 'bg-emerald-500', 'bg-yellow-500', 'bg-pink-500', 'bg-cyan-500'];
+            const tokenSegments = walletState.tokens
+              .map((t) => ({ t, pct: Math.round((estimateTokenUsd(t.symbol, t.uiAmount) / safeTotalUsd) * 100) }))
+              .filter((s) => s.pct >= 1);
+            const unknownPct = Math.max(0, 100 - solPct - tokenSegments.reduce((s, x) => s + x.pct, 0));
+            return (
+              <>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden flex">
+                    <div className="h-full bg-violet-500" style={{ width: `${solPct}%` }} />
+                    {tokenSegments.map(({ t }, i) => (
+                      <div key={t.mint} className={clsx('h-full', tokenColors[i % tokenColors.length])} style={{ width: `${tokenSegments[i].pct}%` }} />
+                    ))}
+                    {unknownPct > 2 && <div className="h-full bg-gray-600" style={{ width: `${unknownPct}%` }} />}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-violet-500" />
+                    SOL {solPct}%
+                  </span>
+                  {tokenSegments.slice(0, 4).map(({ t, pct }, i) => (
+                    <span key={t.mint} className="flex items-center gap-1">
+                      <span className={clsx('w-2 h-2 rounded-full', tokenColors[i % tokenColors.length])} />
+                      {t.symbol} {pct}%
+                    </span>
+                  ))}
+                  {unknownPct > 2 && (
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <span className="w-2 h-2 rounded-full bg-gray-600" />
+                      other {unknownPct}%
+                    </span>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -419,7 +443,7 @@ export function DashboardView() {
     setSeekerInfo(detectSeeker());
   }, []);
 
-  // Fetch real SOL 24h price change + check price alerts
+  // Fetch real prices: update portfolio allocation + check price alerts
   useEffect(() => {
     fetch('/api/prices')
       .then((r) => r.json())
@@ -427,12 +451,14 @@ export function DashboardView() {
         if (typeof d?.prices?.SOL?.change24h === 'number') {
           setSolChange24h(d.prices.SOL.change24h);
         }
-        // Check price alerts with live prices
         if (d?.prices) {
+          // Update module-level live prices so estimateTokenUsd uses real prices
           const currentPrices: Record<string, number> = {};
           for (const [sym, info] of Object.entries(d.prices)) {
             currentPrices[sym] = info.usd;
           }
+          setLiveTokenPrices(currentPrices);
+          // Check price alerts
           const triggered = checkAlerts(currentPrices);
           for (const alert of triggered) {
             fireNotification(
@@ -656,7 +682,7 @@ export function DashboardView() {
       </div>
 
       {/* Aurora Portfolio Insight */}
-      <PortfolioInsight walletState={walletState} />
+      <PortfolioInsight walletState={walletState} totalUsd={totalUsd} />
 
       {/* Agent Autonomy Score */}
       <AutonomyScore />
