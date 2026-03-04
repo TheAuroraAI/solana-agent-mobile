@@ -51,7 +51,7 @@ export function BriefingCard({ demo = false }: { demo?: boolean }) {
               <Sparkles className="w-3.5 h-3.5 text-violet-400" />
             </div>
             <div>
-              <p className="text-white text-sm font-semibold">Aurora's Briefing</p>
+              <p className="text-white text-sm font-semibold">Aurora&apos;s Briefing</p>
               {data && (
                 <p className="text-gray-600 text-[10px]">
                   {data.source === 'live' ? '✦ AI-generated' : '✦ Market data'} · {timeLabel(data.generatedAt)}

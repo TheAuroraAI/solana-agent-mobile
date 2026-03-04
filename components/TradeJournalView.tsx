@@ -131,7 +131,7 @@ function TradeCard({ entry, onDelete }: { entry: TradeEntry; onDelete: (id: stri
         <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-xs font-semibold text-violet-400">Aurora's Take</span>
+            <span className="text-xs font-semibold text-violet-400">Aurora&apos;s Take</span>
           </div>
           <p className="text-xs text-gray-300 leading-relaxed">{entry.aiCommentary}</p>
         </div>
@@ -337,7 +337,7 @@ export function TradeJournalView() {
           <div className="text-center py-12 text-gray-500">
             <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm">No trades logged yet</p>
-            <p className="text-xs mt-1">Tap "Log Trade" to start tracking</p>
+            <p className="text-xs mt-1">Tap &quot;Log Trade&quot; to start tracking</p>
           </div>
         ) : (
           filtered.map(entry => (

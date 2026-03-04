@@ -10,6 +10,9 @@ interface DataPoint {
 }
 
 function SparkLine({ points, isUp }: { points: DataPoint[]; isUp: boolean }) {
+  // Hooks must be called before any early return
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
   if (points.length < 2) return null;
 
   const W = 340;
@@ -32,9 +35,6 @@ function SparkLine({ points, isUp }: { points: DataPoint[]; isUp: boolean }) {
 
   const color = isUp ? '#10b981' : '#ef4444';
   const colorFade = isUp ? '#10b98133' : '#ef444433';
-
-  // Tooltip state
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const getIdx = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
