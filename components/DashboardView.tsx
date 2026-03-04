@@ -10,6 +10,7 @@ import {
   Calendar, ChevronRight, ScanLine,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
+import { BriefingCard } from './BriefingCard';
 import { ActionLogWidget } from './ActionLogWidget';
 import { PullToRefresh } from './PullToRefresh';
 import { NetworkStatus } from './NetworkStatus';
@@ -669,6 +670,9 @@ export function DashboardView() {
 
       {/* Portfolio Sparkline */}
       <PortfolioSparkline totalUsd={totalUsd} solChange24h={solChange24h} />
+
+      {/* AI Market Briefing */}
+      <BriefingCard demo={isDemo} />
 
       {/* Portfolio Health Score */}
       <div className="glass rounded-2xl p-4 mb-4">
