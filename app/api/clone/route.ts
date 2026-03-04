@@ -113,20 +113,22 @@ const DEMO_CLONE_DATA: CloneData[] = [
   },
 ];
 
-// Batch-fetch token prices from Jupiter price API
+// Batch-fetch token prices from DexScreener (free, no auth)
 async function fetchJupiterPrices(mints: string[]): Promise<Record<string, number>> {
   if (mints.length === 0) return {};
   try {
     const ids = mints.join(',');
-    const res = await fetch(`https://api.jup.ag/price/v2?ids=${ids}`, {
+    const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${ids}`, {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) return {};
-    const data = await res.json() as { data: Record<string, { price: string } | null> };
+    const pairs = await res.json() as Array<{ baseToken?: { address?: string }; priceUsd?: string }>;
     const prices: Record<string, number> = {};
-    for (const [mint, entry] of Object.entries(data.data)) {
-      if (entry?.price) {
-        prices[mint] = parseFloat(entry.price);
+    for (const pair of pairs) {
+      const mint = pair.baseToken?.address;
+      if (mint && !prices[mint]) {
+        const price = parseFloat(pair.priceUsd ?? '0');
+        if (price > 0) prices[mint] = price;
       }
     }
     return prices;

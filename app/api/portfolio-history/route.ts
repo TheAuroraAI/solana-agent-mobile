@@ -61,14 +61,15 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ points, source: 'live' });
   } catch {
-    // Fallback: fetch current SOL price from Jupiter to seed the estimate
-    let currentSolPrice = 160;
+    // Fallback: fetch current SOL price from DexScreener to seed the estimate
+    let currentSolPrice = 91;
     try {
-      const jupRes = await fetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
-      if (jupRes.ok) {
-        const jupData = await jupRes.json() as { data: Record<string, { price: string }> };
-        const p = jupData.data['So11111111111111111111111111111111111111112']?.price;
-        if (p) currentSolPrice = parseFloat(p);
+      const dexRes = await fetch('https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112');
+      if (dexRes.ok) {
+        const pairs = await dexRes.json() as Array<{ baseToken?: { symbol?: string }; priceUsd?: string }>;
+        const solPair = pairs.find((p) => p.baseToken?.symbol === 'SOL');
+        const p = solPair?.priceUsd ? parseFloat(solPair.priceUsd) : 0;
+        if (p > 0) currentSolPrice = p;
       }
     } catch { /* keep default */ }
 

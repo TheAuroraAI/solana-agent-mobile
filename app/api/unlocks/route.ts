@@ -35,20 +35,26 @@ const DEFILLAMA_SLUGS: Array<{ slug: string; symbol: string; name: string }> = [
   { slug: 'helium', symbol: 'HNT', name: 'Helium' },
 ];
 
-// Fetch live token prices from Jupiter
+// Fetch live token prices from DexScreener (free, no auth)
 async function fetchJupiterPrices(): Promise<Record<string, number>> {
   try {
     const mints = Object.values(TOKEN_MINTS).join(',');
-    const res = await fetch(`https://api.jup.ag/price/v2?ids=${mints}`, {
+    const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mints}`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return {};
-    const data = await res.json() as { data: Record<string, { price: string }> };
-    
+    const pairs = await res.json() as Array<{ baseToken?: { address?: string }; priceUsd?: string }>;
+
+    // Invert TOKEN_MINTS for mint → symbol lookup
+    const mintToSym = Object.fromEntries(Object.entries(TOKEN_MINTS).map(([s, m]) => [m, s]));
     const prices: Record<string, number> = {};
-    for (const [sym, mint] of Object.entries(TOKEN_MINTS)) {
-      const price = data.data[mint]?.price;
-      if (price) prices[sym] = parseFloat(price);
+    for (const pair of pairs) {
+      const mint = pair.baseToken?.address;
+      const sym = mint ? mintToSym[mint] : undefined;
+      if (sym && !prices[sym]) {
+        const price = parseFloat(pair.priceUsd ?? '0');
+        if (price > 0) prices[sym] = price;
+      }
     }
     return prices;
   } catch {

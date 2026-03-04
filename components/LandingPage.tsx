@@ -45,9 +45,13 @@ export function LandingPage() {
   const [solPrice, setSolPrice] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112', { signal: AbortSignal.timeout(3000) })
+    fetch('https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112', { signal: AbortSignal.timeout(4000) })
       .then(r => r.json())
-      .then(d => setSolPrice(Number(d?.data?.['So11111111111111111111111111111111111111112']?.price)))
+      .then((pairs: Array<{ baseToken?: { symbol?: string }; priceUsd?: string }>) => {
+        const solPair = pairs.find((p) => p.baseToken?.symbol === 'SOL');
+        const price = solPair?.priceUsd ? parseFloat(solPair.priceUsd) : 0;
+        if (price > 0) setSolPrice(price);
+      })
       .catch(() => {});
   }, []);
 

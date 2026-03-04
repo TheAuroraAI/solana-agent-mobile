@@ -21,13 +21,13 @@ const TRACKED_TOKENS: { cgId: string; symbol: string; mint: string }[] = [
 ];
 
 const DEMO_PRICES: TokenPrice[] = [
-  { symbol: 'SOL', price: 141.82, change24h: 2.34 },
-  { symbol: 'JUP', price: 0.892, change24h: -1.2 },
-  { symbol: 'BONK', price: 0.0000234, change24h: 5.67 },
-  { symbol: 'PYTH', price: 0.384, change24h: -0.45 },
-  { symbol: 'WIF', price: 1.23, change24h: 3.12 },
-  { symbol: 'RENDER', price: 7.84, change24h: -2.1 },
-  { symbol: 'SKR', price: 0.042, change24h: 1.8 },
+  { symbol: 'SOL', price: 91.32, change24h: 2.34 },
+  { symbol: 'JUP', price: 0.72, change24h: -1.2 },
+  { symbol: 'BONK', price: 0.0000184, change24h: 5.67 },
+  { symbol: 'PYTH', price: 0.31, change24h: -0.45 },
+  { symbol: 'WIF', price: 1.08, change24h: 3.12 },
+  { symbol: 'RENDER', price: 4.2, change24h: -2.1 },
+  { symbol: 'SKR', price: 0.024, change24h: 1.8 },
 ];
 
 function formatPrice(price: number): string {
@@ -37,8 +37,42 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(7)}`;
 }
 
+interface DexPair {
+  baseToken?: { address?: string };
+  priceUsd?: string;
+  priceChange?: { h24?: number };
+}
+
 async function fetchPrices(): Promise<TokenPrice[]> {
-  // Use CoinGecko for real 24h price changes
+  // Use DexScreener — free, no auth, includes 24h change
+  const mints = TRACKED_TOKENS.map((t) => t.mint).join(',');
+  try {
+    const res = await fetch(
+      `https://api.dexscreener.com/tokens/v1/solana/${mints}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) throw new Error(`DexScreener ${res.status}`);
+    const pairs = await res.json() as DexPair[];
+
+    // Best price per mint (first valid pair wins)
+    const mintToPrice: Record<string, { usd: number; change24h: number }> = {};
+    for (const pair of pairs) {
+      const mint = pair.baseToken?.address;
+      if (mint && !mintToPrice[mint]) {
+        const usd = parseFloat(pair.priceUsd ?? '0');
+        if (usd > 0) mintToPrice[mint] = { usd, change24h: pair.priceChange?.h24 ?? 0 };
+      }
+    }
+
+    const result = TRACKED_TOKENS.map((token) => {
+      const p = mintToPrice[token.mint];
+      return p ? { symbol: token.symbol, price: p.usd, change24h: Math.round(p.change24h * 100) / 100 } : null;
+    }).filter((t): t is TokenPrice => t !== null && t.price > 0);
+
+    if (result.length > 0) return result;
+  } catch { /* fall through */ }
+
+  // CoinGecko fallback
   const cgIds = TRACKED_TOKENS.map((t) => t.cgId).join(',');
   try {
     const res = await fetch(
@@ -46,7 +80,7 @@ async function fetchPrices(): Promise<TokenPrice[]> {
       { signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = await res.json() as Record<string, { usd?: number; usd_24h_change?: number }>;
     return TRACKED_TOKENS.map((token) => {
       const info = data?.[token.cgId];
       const price = info?.usd ?? 0;
@@ -54,22 +88,7 @@ async function fetchPrices(): Promise<TokenPrice[]> {
       return { symbol: token.symbol, price, change24h: Math.round(change24h * 100) / 100 };
     }).filter((t) => t.price > 0);
   } catch {
-    // Fallback: Jupiter price API (no 24h change, show 0%)
-    try {
-      const mints = TRACKED_TOKENS.map((t) => t.mint).join(',');
-      const res = await fetch(
-        `https://api.jup.ag/price/v2?ids=${mints}`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (!res.ok) return [];
-      const data = await res.json();
-      return TRACKED_TOKENS.map((token) => {
-        const price = Number(data?.data?.[token.mint]?.price ?? 0);
-        return { symbol: token.symbol, price, change24h: 0 };
-      }).filter((t) => t.price > 0);
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 

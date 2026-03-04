@@ -40,19 +40,19 @@ const NETWORK = getNetwork();
 const TOKEN_USD_PRICES: Record<string, number> = {
   USDC: 1,
   USDT: 1,
-  jitoSOL: 167, mSOL: 167, bSOL: 167, stSOL: 167, // LSTs approx SOL price
-  JUP: 0.85,
-  BONK: 0.000025,
-  WIF: 2.1,
-  SKR: 0.001,
-  RAY: 2.5,
-  ORCA: 3.5,
-  PYTH: 0.38,
-  RENDER: 8.0,
-  HNT: 5.5,
-  ETH: 3800,
-  WEN: 0.00008,
-  MNGO: 0.02,
+  jitoSOL: 95, mSOL: 95, bSOL: 95, stSOL: 95, // LSTs approx SOL price (~$91 + yield)
+  JUP: 0.72,
+  BONK: 0.000018,
+  WIF: 1.08,
+  SKR: 0.024,
+  RAY: 1.8,
+  ORCA: 2.2,
+  PYTH: 0.31,
+  RENDER: 4.2,
+  HNT: 4.1,
+  ETH: 2400,
+  WEN: 0.00005,
+  MNGO: 0.015,
 };
 
 function estimateTokenUsd(symbol: string, uiAmount: number, livePrices: Record<string, number>): number {

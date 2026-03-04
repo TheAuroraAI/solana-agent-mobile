@@ -72,22 +72,30 @@ export async function GET(req: Request) {
       return NextResponse.json({ results: [], query });
     }
 
-    // Fetch prices from Jupiter for matched tokens
+    // Fetch prices from DexScreener for matched tokens (free, no auth)
     const mints = scored.map((s) => s.token.address).join(',');
-    let prices: Record<string, { price: number | null; extraInfo?: { priceChange24h?: { percentage?: number }; quotedVolume24hUSD?: number } }> = {};
+    const dexPrices: Record<string, { price: number | null; change24h: number | null }> = {};
 
     try {
-      const priceRes = await fetch(`https://api.jup.ag/price/v2?ids=${mints}`, {
+      const priceRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mints}`, {
         next: { revalidate: 30 },
       });
       if (priceRes.ok) {
-        const priceData = await priceRes.json();
-        prices = priceData.data ?? {};
+        const pairs = await priceRes.json() as Array<{ baseToken?: { address?: string }; priceUsd?: string; priceChange?: { h24?: number } }>;
+        for (const pair of pairs) {
+          const mint = pair.baseToken?.address;
+          if (mint && !dexPrices[mint]) {
+            dexPrices[mint] = {
+              price: pair.priceUsd ? parseFloat(pair.priceUsd) : null,
+              change24h: pair.priceChange?.h24 ?? null,
+            };
+          }
+        }
       }
     } catch { /* prices stay empty */ }
 
     const results: SearchToken[] = scored.map(({ token }) => {
-      const p = prices[token.address];
+      const p = dexPrices[token.address];
       return {
         symbol: token.symbol,
         name: token.name,
@@ -95,8 +103,8 @@ export async function GET(req: Request) {
         decimals: token.decimals,
         logoURI: token.logoURI ?? null,
         price: p?.price ?? null,
-        change24h: p?.extraInfo?.priceChange24h?.percentage ?? null,
-        volume24h: p?.extraInfo?.quotedVolume24hUSD ?? null,
+        change24h: p?.change24h ?? null,
+        volume24h: null,
       };
     });
 

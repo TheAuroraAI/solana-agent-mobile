@@ -179,15 +179,16 @@ export async function getSolPrice(): Promise<number> {
   if (_solPriceCache && now - _solPriceCache.ts < 60_000) {
     return _solPriceCache.price;
   }
-  // Try Jupiter v4 price API first
+  // Try DexScreener first (free, no auth, reliable)
   try {
     const res = await fetch(
-      'https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112',
-      { signal: AbortSignal.timeout(3000) }
+      'https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112',
+      { signal: AbortSignal.timeout(4000) }
     );
     if (res.ok) {
-      const data = await res.json();
-      const price = Number(data?.data?.['So11111111111111111111111111111111111111112']?.price);
+      const pairs = await res.json() as Array<{ priceUsd?: string; baseToken?: { symbol?: string } }>;
+      const solPair = pairs.find((p) => p.baseToken?.symbol === 'SOL');
+      const price = solPair ? parseFloat(solPair.priceUsd ?? '0') : 0;
       if (price > 0) {
         _solPriceCache = { price, ts: now };
         return price;
@@ -213,7 +214,7 @@ export async function getSolPrice(): Promise<number> {
   } catch {
     // Fall through to cached/fallback
   }
-  return _solPriceCache?.price ?? 140;
+  return _solPriceCache?.price ?? 91;
 }
 
 export function formatSol(amount: number): string {
@@ -238,7 +239,7 @@ export function truncateAddress(address: string): string {
 export const DEMO_WALLET_STATE: WalletState = {
   address: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
   solBalance: 12.847,
-  solBalanceUsd: 1798.58, // ~$140/SOL
+  solBalanceUsd: 1169.08, // ~$91/SOL
   tokens: [
     {
       mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',

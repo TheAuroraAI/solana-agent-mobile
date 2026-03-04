@@ -41,26 +41,20 @@ async function fetchMarketSnapshot() {
   try {
     const addresses = Object.values(BRIEFING_MINTS).join(',');
 
-    // Fetch Jupiter prices + DexScreener (price change + volume) in parallel
-    const [jupRes, dexRes] = await Promise.all([
-      briefingFetchTimeout(`https://api.jup.ag/price/v2?ids=${addresses}`, 8000),
-      briefingFetchTimeout(`https://api.dexscreener.com/tokens/v1/solana/${addresses}`, 8000),
-    ]);
+    // Fetch prices + 24h change + volume from DexScreener (free, no auth)
+    const dexRes = await briefingFetchTimeout(
+      `https://api.dexscreener.com/tokens/v1/solana/${addresses}`,
+      8000
+    );
 
-    // Build price map from Jupiter
-    const jupData: { data: Record<string, { price: string }> } = jupRes.ok ? await jupRes.json() : { data: {} };
+    // Build price map + 24h change from DexScreener
     const prices: Record<string, number> = {};
-    for (const [sym, mint] of Object.entries(BRIEFING_MINTS)) {
-      const p = jupData.data[mint]?.price;
-      if (p) prices[sym] = parseFloat(p);
-    }
-
-    // Build 24h change + volume map from DexScreener
     const changes: Record<string, number> = {};
     let solVolume24h = 3_000_000_000;
     if (dexRes.ok) {
       const pairs: Array<{
         baseToken?: { address?: string };
+        priceUsd?: string;
         priceChangeH24?: number;
         volume?: { h24?: number };
       }> = await dexRes.json();
@@ -68,9 +62,12 @@ async function fetchMarketSnapshot() {
       for (const pair of pairs) {
         const mint = pair.baseToken?.address;
         const sym = mint ? MINT_TO_SYM[mint] : undefined;
-        if (sym && typeof pair.priceChangeH24 === 'number' && !(sym in changes)) {
-          changes[sym] = pair.priceChangeH24;
-          if (sym === 'SOL' && pair.volume?.h24) solVolume24h = pair.volume.h24;
+        if (sym) {
+          if (!prices[sym] && pair.priceUsd) prices[sym] = parseFloat(pair.priceUsd);
+          if (typeof pair.priceChangeH24 === 'number' && !(sym in changes)) {
+            changes[sym] = pair.priceChangeH24;
+            if (sym === 'SOL' && pair.volume?.h24) solVolume24h = pair.volume.h24;
+          }
         }
       }
     }
