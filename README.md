@@ -113,11 +113,13 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 8. **Yield** → Browse DeFi opportunities including SKR Guardian Staking (20.2% APY) with delegation guide
 9. **Share** → Tap "Share" in Quick Actions → generates branded portfolio card → download PNG or share natively
 10. **Token Sniper** → Browse new Solana token launches → one-tap "Snipe" routes to Actions for instant buy
+11. **Staking** → Manage Jito/Marinade/native SOL positions — live APY, rewards tracker, one-tap stake/unstake
+12. **Trade Journal** → Log trades with AI-generated commentary from Aurora → P&L tracking + CSV export
 
 ## Architecture
 
 ```
-Browser (Mobile PWA — 19 pages)
+Browser (Mobile PWA — 21 pages)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
 ├── Dashboard → Portfolio + 7d Chart + AI Briefing + 24h P&L + Health Score + Insight
 │   └── Share Card → "Share My Report" exports SVG/PNG portfolio card (Web Share API)
@@ -125,6 +127,8 @@ Browser (Mobile PWA — 19 pages)
 ├── Actions → AI Proposals: Stake/Swap/Analysis/Alert + Copy Trade mode (Haiku 4.5 or Groq)
 ├── Rebalance → Target allocation sliders + auto trade plan → routes to Actions for signing
 ├── Token Sniper → New Solana launches: DexScreener boosts + buy pressure + one-tap snipe
+├── Staking → Jito + Marinade + native SOL staking manager — live APY, rewards, stake/unstake modals
+├── Trade Journal → Log trades → AI (Aurora) writes commentary → P&L stats + CSV export
 ├── Blinks → Solana Actions executor — paste any solana-action: URL, execute in-app
 ├── Whales → Real-time whale tracker with "Copy Trade" one-tap swap pre-fill
 ├── NFTs → NFT gallery with collection filters, floor prices, grid/list views
