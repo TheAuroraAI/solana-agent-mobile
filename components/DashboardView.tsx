@@ -52,23 +52,16 @@ const TOKEN_USD_PRICES: Record<string, number> = {
   MNGO: 0.02,
 };
 
-// liveTokenPrices is populated from /api/prices and injected into DashboardView
-let _liveTokenPrices: Record<string, number> = {};
-
-export function setLiveTokenPrices(prices: Record<string, number>) {
-  _liveTokenPrices = prices;
-}
-
-function estimateTokenUsd(symbol: string, uiAmount: number): number {
+function estimateTokenUsd(symbol: string, uiAmount: number, livePrices: Record<string, number>): number {
   // Prefer live price from /api/prices
-  if (_liveTokenPrices[symbol] != null) return uiAmount * _liveTokenPrices[symbol];
+  if (livePrices[symbol] != null) return uiAmount * livePrices[symbol];
   const price = TOKEN_USD_PRICES[symbol];
   if (price !== undefined) return uiAmount * price;
   return 0; // Unknown tokens not counted (shown as "?" in UI)
 }
 
-function computeTotalUsd(ws: WalletState): number {
-  const tokenValue = ws.tokens.reduce((sum, t) => sum + estimateTokenUsd(t.symbol, t.uiAmount), 0);
+function computeTotalUsd(ws: WalletState, livePrices: Record<string, number>): number {
+  const tokenValue = ws.tokens.reduce((sum, t) => sum + estimateTokenUsd(t.symbol, t.uiAmount, livePrices), 0);
   return ws.solBalanceUsd + tokenValue;
 }
 
@@ -204,7 +197,7 @@ function HealthScoreRing({ score, label, color }: { score: number; label: string
   );
 }
 
-function PortfolioInsight({ walletState, totalUsd }: { walletState: WalletState; totalUsd: number }) {
+function PortfolioInsight({ walletState, totalUsd, livePrices }: { walletState: WalletState; totalUsd: number; livePrices: Record<string, number> }) {
   // Use the full computed totalUsd (which uses estimated/live prices for all known tokens)
   const safeTotalUsd = totalUsd > 0 ? totalUsd : walletState.solBalanceUsd;
   const solPct = Math.round((walletState.solBalanceUsd / safeTotalUsd) * 100);
@@ -263,7 +256,7 @@ function PortfolioInsight({ walletState, totalUsd }: { walletState: WalletState;
           {(() => {
             const tokenColors = ['bg-blue-500', 'bg-emerald-500', 'bg-yellow-500', 'bg-pink-500', 'bg-cyan-500'];
             const tokenSegments = walletState.tokens
-              .map((t) => ({ t, pct: Math.round((estimateTokenUsd(t.symbol, t.uiAmount) / safeTotalUsd) * 100) }))
+              .map((t) => ({ t, pct: Math.round((estimateTokenUsd(t.symbol, t.uiAmount, livePrices) / safeTotalUsd) * 100) }))
               .filter((s) => s.pct >= 1);
             const unknownPct = Math.max(0, 100 - solPct - tokenSegments.reduce((s, x) => s + x.pct, 0));
             return (
@@ -370,6 +363,7 @@ export function DashboardView() {
   const [showQrScan, setShowQrScan] = useState(false);
   const [qrScanError, setQrScanError] = useState<string | null>(null);
   const [solChange24h, setSolChange24h] = useState<number | null>(null);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
 
   // Parse Solana Pay URL: solana:<address>?amount=X&label=Y
   const parseSolanaPayUrl = useCallback((raw: string) => {
@@ -452,12 +446,12 @@ export function DashboardView() {
           setSolChange24h(d.prices.SOL.change24h);
         }
         if (d?.prices) {
-          // Update module-level live prices so estimateTokenUsd uses real prices
+          // Store live prices in React state so totalUsd recomputes when they arrive
           const currentPrices: Record<string, number> = {};
           for (const [sym, info] of Object.entries(d.prices)) {
             currentPrices[sym] = info.usd;
           }
-          setLiveTokenPrices(currentPrices);
+          setLivePrices(currentPrices);
           // Check price alerts
           const triggered = checkAlerts(currentPrices);
           for (const alert of triggered) {
@@ -488,7 +482,7 @@ export function DashboardView() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const totalUsd = useMemo(() => walletState ? computeTotalUsd(walletState) : 0, [walletState]);
+  const totalUsd = useMemo(() => walletState ? computeTotalUsd(walletState, livePrices) : 0, [walletState, livePrices]);
   const healthScore = useMemo(() => walletState ? computeHealthScore(walletState) : { score: 0, label: '', color: '' }, [walletState]);
 
   if (!walletState) {
@@ -682,7 +676,7 @@ export function DashboardView() {
       </div>
 
       {/* Aurora Portfolio Insight */}
-      <PortfolioInsight walletState={walletState} totalUsd={totalUsd} />
+      <PortfolioInsight walletState={walletState} totalUsd={totalUsd} livePrices={livePrices} />
 
       {/* Agent Autonomy Score */}
       <AutonomyScore />
@@ -838,7 +832,7 @@ export function DashboardView() {
                      token.uiAmount.toFixed(2)}
                   </p>
                   {(() => {
-                    const usdVal = estimateTokenUsd(token.symbol, token.uiAmount);
+                    const usdVal = estimateTokenUsd(token.symbol, token.uiAmount, livePrices);
                     if (usdVal > 0) return <p className="text-gray-500 text-xs">≈ {formatUsd(usdVal)}</p>;
                     if (token.symbol === 'USDC' || token.symbol === 'USDT') return <p className="text-gray-500 text-xs">${token.uiAmount.toFixed(2)}</p>;
                     return null;
