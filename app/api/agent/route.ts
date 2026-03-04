@@ -73,6 +73,9 @@ Only suggest the above protocols. Do not mention protocols outside this list.`;
 }
 
 async function handleGroq(systemPrompt: string, messages: { role: string; content: string }[]) {
+  if (!process.env.GROQ_API_KEY) {
+    return Response.json({ error: 'GROQ_API_KEY not configured. Add it to .env' }, { status: 500 });
+  }
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
   const stream = await groq.chat.completions.create({

@@ -97,6 +97,12 @@ export function LandingPage() {
         <p className="text-center text-gray-500 text-xs mt-4">
           Non-custodial · Open Source · Solana
         </p>
+        <div className="flex items-center justify-center gap-1.5 mt-3">
+          <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center">
+            <span className="text-white text-[8px] font-bold">A</span>
+          </div>
+          <span className="text-gray-600 text-[10px] tracking-wide">Built autonomously by Aurora AI</span>
+        </div>
       </div>
     </div>
   );

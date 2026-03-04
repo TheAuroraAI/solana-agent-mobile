@@ -158,21 +158,39 @@ export async function getSolPrice(): Promise<number> {
   if (_solPriceCache && now - _solPriceCache.ts < 60_000) {
     return _solPriceCache.price;
   }
+  // Try Jupiter v4 price API first
   try {
     const res = await fetch(
-      'https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112',
+      'https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112',
       { signal: AbortSignal.timeout(3000) }
     );
     if (res.ok) {
       const data = await res.json();
-      const price = data?.data?.['So11111111111111111111111111111111111111112']?.price;
+      const price = Number(data?.data?.['So11111111111111111111111111111111111111112']?.price);
+      if (price > 0) {
+        _solPriceCache = { price, ts: now };
+        return price;
+      }
+    }
+  } catch {
+    // Fall through to CoinGecko
+  }
+  // CoinGecko fallback (no API key needed)
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd',
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const price = data?.solana?.usd;
       if (typeof price === 'number' && price > 0) {
         _solPriceCache = { price, ts: now };
         return price;
       }
     }
   } catch {
-    // Fall through to fallback
+    // Fall through to cached/fallback
   }
   return _solPriceCache?.price ?? 140;
 }

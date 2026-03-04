@@ -10,6 +10,7 @@ import {
   Calendar, ChevronRight,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
+import { ActionLogWidget } from './ActionLogWidget';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -341,6 +342,11 @@ export function DashboardView() {
           <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
         </div>
       </Link>
+
+      {/* Agent Action Log */}
+      <div className="mb-4">
+        <ActionLogWidget />
+      </div>
 
       {/* Recent Transactions */}
       <div>

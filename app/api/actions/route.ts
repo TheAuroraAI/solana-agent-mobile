@@ -38,15 +38,15 @@ interface AgentAction {
 
 export async function POST(req: Request) {
   try {
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
-
     const { walletState }: { walletState: WalletState } = await req.json();
 
     if (!walletState) {
       return Response.json({ error: 'walletState required' }, { status: 400 });
     }
+
+    const groq = process.env.GROQ_API_KEY
+      ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+      : null;
 
     const totalUsd = walletState.solBalanceUsd +
       walletState.tokens.reduce((sum, t) => {
@@ -117,7 +117,7 @@ Return ONLY a valid JSON array, no markdown wrapping:
     let rawActions: Omit<AgentAction, 'status' | 'createdAt'>[] = [];
     let parseSuccess = false;
 
-    for (let attempt = 0; attempt < 2 && !parseSuccess; attempt++) {
+    for (let attempt = 0; attempt < 2 && !parseSuccess && groq; attempt++) {
       try {
         const completion = await groq.chat.completions.create({
           model: 'llama-3.3-70b-versatile',

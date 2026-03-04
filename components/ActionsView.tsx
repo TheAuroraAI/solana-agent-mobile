@@ -11,6 +11,7 @@ import {
 import { clsx } from 'clsx';
 import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/solana';
 import { getJupiterSwapTx, resolveOutputMint, SOL_MINT } from '@/lib/jupiter';
+import { logAction, updateActionOutcome } from '@/lib/action-log';
 
 const NETWORK = getNetwork();
 
@@ -272,6 +273,18 @@ export function ActionsView() {
       if (data.actions?.length > 0) {
         setActions(data.actions);
         setAiGenerated(true);
+        // Log to persistent action history
+        for (const a of data.actions) {
+          logAction({
+            id: `${Date.now()}-${a.id}`,
+            timestamp: new Date().toISOString(),
+            type: a.type,
+            title: a.title,
+            outcome: 'proposed',
+            protocol: a.details?.protocol,
+            amount: a.details?.amount,
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to generate actions:', err);
@@ -350,6 +363,7 @@ export function ActionsView() {
         setActions((prev) =>
           prev.map((a) => (a.id === id ? { ...a, status: 'executed' } : a))
         );
+        updateActionOutcome(id, 'executed', sig);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         // User-friendly error messages
@@ -374,6 +388,7 @@ export function ActionsView() {
       setActions((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: 'approved' } : a))
       );
+      updateActionOutcome(id, 'approved');
     }
   };
 
@@ -381,6 +396,7 @@ export function ActionsView() {
     setActions((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: 'rejected' } : a))
     );
+    updateActionOutcome(id, 'rejected');
   };
 
   const handleRefresh = () => {
