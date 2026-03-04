@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -14,6 +14,7 @@ const primaryNav = [
 ];
 
 const moreNav = [
+  { href: '/policies', label: 'Policies', icon: Shield },
   { href: '/whales', label: 'Whales', icon: Activity },
   { href: '/unlocks', label: 'Unlocks', icon: Calendar },
   { href: '/settings', label: 'Settings', icon: Settings },

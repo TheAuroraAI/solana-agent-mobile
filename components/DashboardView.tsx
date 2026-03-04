@@ -24,8 +24,76 @@ import {
   timeAgo,
 } from '@/lib/solana';
 import { detectSeeker, type SeekerInfo } from '@/lib/seeker';
+import { Shield } from 'lucide-react';
 
 const NETWORK = getNetwork();
+
+function computeHealthScore(ws: WalletState): { score: number; label: string; color: string } {
+  let score = 50;
+
+  // Diversification (+15 if not 100% SOL)
+  const totalUsd = ws.solBalanceUsd + ws.tokens.reduce((s, t) => s + t.uiAmount, 0);
+  const solPct = totalUsd > 0 ? (ws.solBalanceUsd / totalUsd) * 100 : 100;
+  if (solPct <= 70) score += 15;
+  else if (solPct <= 85) score += 8;
+
+  // Staking yield (+15 if holding LST)
+  const hasLst = ws.tokens.some(t => ['jitoSOL', 'mSOL', 'bSOL', 'SKR', 'stSOL'].includes(t.symbol));
+  if (hasLst) score += 15;
+
+  // Stablecoin reserve (+10 if >5%)
+  const stableUsd = ws.tokens.filter(t => t.symbol === 'USDC' || t.symbol === 'USDT')
+    .reduce((s, t) => s + t.uiAmount, 0);
+  const stablePct = totalUsd > 0 ? (stableUsd / totalUsd) * 100 : 0;
+  if (stablePct >= 10) score += 10;
+  else if (stablePct >= 5) score += 5;
+
+  // Activity (+10 if recent txns)
+  if (ws.recentTransactions.length >= 3) score += 10;
+
+  // Clamp
+  score = Math.min(100, Math.max(0, score));
+
+  const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
+  const color = score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-violet-400' : score >= 40 ? 'text-yellow-400' : 'text-orange-400';
+  return { score, label, color };
+}
+
+function HealthScoreRing({ score, label, color }: { score: number; label: string; color: string }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative w-16 h-16 flex-shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r={r} fill="none" strokeWidth="5" className="stroke-gray-800" />
+          <circle
+            cx="32" cy="32" r={r} fill="none" strokeWidth="5"
+            strokeDasharray={`${dash} ${circ}`}
+            strokeLinecap="round"
+            className={clsx(
+              'transition-all duration-700',
+              score >= 80 ? 'stroke-emerald-400' : score >= 60 ? 'stroke-violet-400' : score >= 40 ? 'stroke-yellow-400' : 'stroke-orange-400'
+            )}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={clsx('text-sm font-bold', color)}>{score}</span>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <Shield className="w-3.5 h-3.5 text-violet-400" />
+          <span className="text-white text-sm font-semibold">Portfolio Health</span>
+        </div>
+        <span className={clsx('text-xs font-semibold', color)}>{label}</span>
+        <p className="text-gray-500 text-xs mt-0.5">Based on diversification, yield & activity</p>
+      </div>
+    </div>
+  );
+}
 
 function PortfolioInsight({ walletState }: { walletState: WalletState }) {
   const solPct = walletState.tokens.length === 0 ? 100 :
@@ -257,11 +325,16 @@ export function DashboardView() {
         </div>
       </div>
 
+      {/* Portfolio Health Score */}
+      <div className="glass rounded-2xl p-4 mb-4">
+        <HealthScoreRing {...computeHealthScore(walletState)} />
+      </div>
+
       {/* Aurora Portfolio Insight */}
       <PortfolioInsight walletState={walletState} />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <a
           href={isDemo ? '/chat?demo=true' : '/chat'}
           className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
@@ -279,6 +352,15 @@ export function DashboardView() {
             <Zap className="text-emerald-400 w-5 h-5" />
           </div>
           <span className="text-white text-xs font-medium">Actions</span>
+        </a>
+        <a
+          href={isDemo ? '/policies?demo=true' : '/policies'}
+          className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+        >
+          <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+            <Shield className="text-blue-400 w-5 h-5" />
+          </div>
+          <span className="text-white text-xs font-medium">Policies</span>
         </a>
       </div>
 
