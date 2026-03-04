@@ -365,6 +365,7 @@ export function DashboardView() {
   const [qrScanError, setQrScanError] = useState<string | null>(null);
   const [solChange24h, setSolChange24h] = useState<number | null>(null);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [priceChanges24h, setPriceChanges24h] = useState<Record<string, number>>({});
 
   // Parse Solana Pay URL: solana:<address>?amount=X&label=Y
   const parseSolanaPayUrl = useCallback((raw: string) => {
@@ -449,10 +450,13 @@ export function DashboardView() {
         if (d?.prices) {
           // Store live prices in React state so totalUsd recomputes when they arrive
           const currentPrices: Record<string, number> = {};
+          const changes: Record<string, number> = {};
           for (const [sym, info] of Object.entries(d.prices)) {
             currentPrices[sym] = info.usd;
+            if (typeof info.change24h === 'number') changes[sym] = info.change24h;
           }
           setLivePrices(currentPrices);
+          setPriceChanges24h(changes);
           // Check price alerts
           const triggered = checkAlerts(currentPrices);
           for (const alert of triggered) {
@@ -485,6 +489,29 @@ export function DashboardView() {
 
   const totalUsd = useMemo(() => walletState ? computeTotalUsd(walletState, livePrices) : 0, [walletState, livePrices]);
   const healthScore = useMemo(() => walletState ? computeHealthScore(walletState) : { score: 0, label: '', color: '' }, [walletState]);
+
+  // Compute portfolio 24h P&L using live price changes
+  const portfolioPnL24h = useMemo(() => {
+    if (!walletState || Object.keys(priceChanges24h).length === 0) return null;
+    let pnl = 0;
+    // SOL position
+    const solChange = priceChanges24h['SOL'];
+    if (typeof solChange === 'number' && walletState.solBalanceUsd > 0) {
+      pnl += walletState.solBalanceUsd * (solChange / (100 + solChange));
+    }
+    // Token positions
+    for (const token of walletState.tokens) {
+      const change = priceChanges24h[token.symbol];
+      if (typeof change !== 'number') continue;
+      const currentVal = estimateTokenUsd(token.symbol, token.uiAmount, livePrices);
+      if (currentVal > 0) {
+        pnl += currentVal * (change / (100 + change));
+      }
+    }
+    if (totalUsd === 0) return null;
+    const pct = (pnl / (totalUsd - pnl)) * 100;
+    return { usd: pnl, pct };
+  }, [walletState, priceChanges24h, livePrices, totalUsd]);
 
   if (!walletState) {
     return (
@@ -645,8 +672,22 @@ export function DashboardView() {
       {/* Balance card */}
       <div className="glass rounded-3xl p-6 mb-4 bg-gradient-to-br from-violet-950/40 to-purple-950/20">
         <p className="text-gray-400 text-xs mb-1">Total Balance</p>
-        <div className="text-4xl font-bold text-white mb-1">
-          {formatUsd(totalUsd)}
+        <div className="flex items-end gap-3 mb-1">
+          <div className="text-4xl font-bold text-white">
+            {formatUsd(totalUsd)}
+          </div>
+          {portfolioPnL24h && (
+            <div className={clsx(
+              'text-sm font-medium pb-1',
+              portfolioPnL24h.usd >= 0 ? 'text-emerald-400' : 'text-red-400'
+            )}>
+              {portfolioPnL24h.usd >= 0 ? '+' : ''}
+              {formatUsd(portfolioPnL24h.usd)}{' '}
+              <span className="text-xs opacity-80">
+                ({portfolioPnL24h.pct >= 0 ? '+' : ''}{portfolioPnL24h.pct.toFixed(2)}%)
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-gray-300">
           <span className="text-sm font-medium">{formatSol(walletState.solBalance)}</span>
