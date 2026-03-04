@@ -7,8 +7,9 @@ import Link from 'next/link';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
   FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
-  Calendar, ChevronRight, ScanLine, Image as ImageIcon,
+  Calendar, ChevronRight, ScanLine, Image as ImageIcon, Share2,
 } from 'lucide-react';
+import { ShareCardModal } from './ShareCardModal';
 import { PriceTicker } from './PriceTicker';
 import { BriefingCard } from './BriefingCard';
 import { PortfolioChart } from './PortfolioChart';
@@ -367,6 +368,7 @@ export function DashboardView() {
   const [solChange24h, setSolChange24h] = useState<number | null>(null);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [priceChanges24h, setPriceChanges24h] = useState<Record<string, number>>({});
+  const [showShare, setShowShare] = useState(false);
 
   // Parse Solana Pay URL: solana:<address>?amount=X&label=Y
   const parseSolanaPayUrl = useCallback((raw: string) => {
@@ -535,6 +537,7 @@ export function DashboardView() {
   }
 
   return (
+    <>
     <PullToRefresh onRefresh={fetchWalletState}>
     <div className="safe-top px-4 pt-6 pb-4">
       {/* Demo Mode Banner */}
@@ -735,43 +738,52 @@ export function DashboardView() {
       <AutonomyScore />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-2 mb-1">
+      <div className="grid grid-cols-5 gap-1.5 mb-1">
         <button
           onClick={() => setShowSend(true)}
-          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+          className="glass rounded-2xl p-2.5 flex flex-col items-center gap-1 active:scale-95 transition-transform"
         >
-          <div className="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-orange-500/20 rounded-xl flex items-center justify-center">
             <ArrowUpRight className="text-orange-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Send</span>
+          <span className="text-white text-[10px] font-medium">Send</span>
         </button>
         <button
           onClick={() => setShowReceive(true)}
-          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+          className="glass rounded-2xl p-2.5 flex flex-col items-center gap-1 active:scale-95 transition-transform"
         >
-          <div className="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-emerald-500/20 rounded-xl flex items-center justify-center">
             <ArrowDownLeft className="text-emerald-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Receive</span>
+          <span className="text-white text-[10px] font-medium">Receive</span>
         </button>
         <button
           onClick={startQrScan}
-          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+          className="glass rounded-2xl p-2.5 flex flex-col items-center gap-1 active:scale-95 transition-transform"
         >
-          <div className="w-9 h-9 bg-sky-500/20 rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-sky-500/20 rounded-xl flex items-center justify-center">
             <ScanLine className="text-sky-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Scan QR</span>
+          <span className="text-white text-[10px] font-medium">Scan</span>
         </button>
         <a
           href={isDemo ? '/yield?demo=true' : '/yield'}
-          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+          className="glass rounded-2xl p-2.5 flex flex-col items-center gap-1 active:scale-95 transition-transform"
         >
-          <div className="w-9 h-9 bg-blue-500/20 rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center">
             <TrendingUp className="text-blue-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Yield</span>
+          <span className="text-white text-[10px] font-medium">Yield</span>
         </a>
+        <button
+          onClick={() => setShowShare(true)}
+          className="glass rounded-2xl p-2.5 flex flex-col items-center gap-1 active:scale-95 transition-transform"
+        >
+          <div className="w-8 h-8 bg-violet-500/20 rounded-xl flex items-center justify-center">
+            <Share2 className="text-violet-400 w-4 h-4" />
+          </div>
+          <span className="text-white text-[10px] font-medium">Share</span>
+        </button>
       </div>
       {qrScanError && (
         <p className="text-red-400 text-xs text-center mb-3">{qrScanError}</p>
@@ -1036,5 +1048,25 @@ export function DashboardView() {
       </div>
     </div>
     </PullToRefresh>
+
+    {/* Portfolio Share Card Modal */}
+    {showShare && walletState && (
+      <ShareCardModal
+        wallet={walletState.address}
+        totalUsd={totalUsd}
+        solBalance={walletState.solBalance}
+        solBalanceUsd={walletState.solBalanceUsd}
+        healthScore={healthScore.score}
+        healthLabel={healthScore.label}
+        pnl24h={portfolioPnL24h}
+        topTokens={walletState.tokens
+          .map(t => ({ symbol: t.symbol, usdValue: estimateTokenUsd(t.symbol, t.uiAmount, livePrices) }))
+          .filter(t => t.usdValue > 0)
+          .sort((a, b) => b.usdValue - a.usdValue)
+          .slice(0, 3)}
+        onClose={() => setShowShare(false)}
+      />
+    )}
+    </>
   );
 }
