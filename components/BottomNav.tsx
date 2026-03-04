@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -14,10 +14,10 @@ const primaryNav = [
 ];
 
 const moreNav = [
-  { href: '/policies', label: 'Policies', icon: Shield },
-  { href: '/whales', label: 'Whales', icon: Activity },
-  { href: '/unlocks', label: 'Unlocks', icon: Calendar },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/policies', label: 'Policies', icon: Shield, desc: 'Portfolio rules & automation' },
+  { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
+  { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
+  { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
 ];
 
 export function BottomNav() {
@@ -25,48 +25,37 @@ export function BottomNav() {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get('demo') === 'true';
   const demoSuffix = isDemo ? '?demo=true' : '';
-  const [moreOpen, setMoreOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const isMoreActive = moreNav.some(({ href }) => pathname.startsWith(href));
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-    if (moreOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [moreOpen]);
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur border-t border-gray-800 safe-bottom">
-      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
-        {primaryNav.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={`${href}${demoSuffix}`}
-              onClick={() => navigator.vibrate?.(10)}
-              className={clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
-                isActive
-                  ? 'text-violet-400'
-                  : 'text-gray-500 hover:text-gray-300'
-              )}
-            >
-              <Icon className={clsx('w-5 h-5', isActive && 'stroke-[2.5]')} />
-              <span className="text-[10px] font-medium">{label}</span>
-            </Link>
-          );
-        })}
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur border-t border-gray-800 safe-bottom">
+        <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
+          {primaryNav.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={`${href}${demoSuffix}`}
+                onClick={() => navigator.vibrate?.(10)}
+                className={clsx(
+                  'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
+                  isActive
+                    ? 'text-violet-400'
+                    : 'text-gray-500 hover:text-gray-300'
+                )}
+              >
+                <Icon className={clsx('w-5 h-5', isActive && 'stroke-[2.5]')} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </Link>
+            );
+          })}
 
-        {/* More menu */}
-        <div className="relative" ref={menuRef}>
+          {/* More button */}
           <button
-            onClick={() => { navigator.vibrate?.(10); setMoreOpen(!moreOpen); }}
+            onClick={() => { navigator.vibrate?.(10); setSheetOpen(true); }}
             className={clsx(
               'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
               isMoreActive
@@ -77,32 +66,65 @@ export function BottomNav() {
             <MoreHorizontal className={clsx('w-5 h-5', isMoreActive && 'stroke-[2.5]')} />
             <span className="text-[10px] font-medium">More</span>
           </button>
+        </div>
+      </nav>
 
-          {moreOpen && (
-            <div className="absolute bottom-full right-0 mb-2 w-40 bg-gray-800 rounded-xl border border-gray-700 shadow-xl overflow-hidden">
-              {moreNav.map(({ href, label, icon: Icon }) => {
+      {/* Bottom sheet overlay */}
+      {sheetOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+          onClick={() => setSheetOpen(false)}
+        >
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl border-t border-gray-700/50 animate-[fadeUp_0.2s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="flex justify-center py-3">
+              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+            </div>
+
+            {/* Close button */}
+            <button
+              onClick={() => setSheetOpen(false)}
+              className="absolute top-3 right-4 p-1.5 rounded-full bg-gray-800 text-gray-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Menu items */}
+            <div className="px-4 pb-8 space-y-1">
+              {moreNav.map(({ href, label, icon: Icon, desc }) => {
                 const isActive = pathname.startsWith(href);
                 return (
                   <Link
                     key={href}
                     href={`${href}${demoSuffix}`}
-                    onClick={() => setMoreOpen(false)}
+                    onClick={() => { navigator.vibrate?.(10); setSheetOpen(false); }}
                     className={clsx(
-                      'flex items-center gap-3 px-4 py-3 transition-colors',
+                      'flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors',
                       isActive
-                        ? 'text-violet-400 bg-gray-700/50'
-                        : 'text-gray-300 hover:bg-gray-700/30'
+                        ? 'text-violet-400 bg-violet-500/10'
+                        : 'text-gray-300 active:bg-gray-800'
                     )}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">{label}</span>
+                    <div className={clsx(
+                      'w-10 h-10 rounded-xl flex items-center justify-center',
+                      isActive ? 'bg-violet-500/20' : 'bg-gray-800'
+                    )}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium block">{label}</span>
+                      <span className="text-xs text-gray-500">{desc}</span>
+                    </div>
                   </Link>
                 );
               })}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </nav>
+      )}
+    </>
   );
 }
