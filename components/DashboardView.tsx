@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { BriefingCard } from './BriefingCard';
+import { PortfolioChart } from './PortfolioChart';
 import { ActionLogWidget } from './ActionLogWidget';
 import { PullToRefresh } from './PullToRefresh';
 import { NetworkStatus } from './NetworkStatus';
@@ -711,6 +712,13 @@ export function DashboardView() {
 
       {/* Portfolio Sparkline */}
       <PortfolioSparkline totalUsd={totalUsd} solChange24h={solChange24h} />
+
+      {/* 7-Day Portfolio History Chart */}
+      <PortfolioChart
+        solBalance={walletState.solBalance}
+        tokenUsd={totalUsd - walletState.solBalanceUsd}
+        demo={isDemo}
+      />
 
       {/* AI Market Briefing */}
       <BriefingCard demo={isDemo} />
