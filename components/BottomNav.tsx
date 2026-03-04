@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -25,6 +25,9 @@ const moreNav = [
   { href: '/staking', label: 'Staking', icon: Layers, desc: 'Stake SOL with Jito, Marinade, or native validators' },
   { href: '/journal', label: 'Trade Journal', icon: BookOpen, desc: 'Log trades with AI commentary and export history' },
   { href: '/sniper', label: 'Token Sniper', icon: Crosshair, desc: 'New Solana tokens — boosted & trending launches' },
+  { href: '/gas', label: 'Gas Station', icon: Fuel, desc: 'Real-time priority fees & network congestion' },
+  { href: '/dca', label: 'DCA Scheduler', icon: Repeat, desc: 'Dollar-cost average into any Solana token' },
+  { href: '/alerts', label: 'Alerts', icon: Bell, desc: 'Price alerts, whale moves & custom notifications' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
