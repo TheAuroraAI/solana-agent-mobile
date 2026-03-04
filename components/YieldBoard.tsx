@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown, RefreshCw,
+  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown, RefreshCw, Calculator,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SKR_STAKING_URL, SKR_STAKING_APY } from '@/lib/solana';
@@ -77,6 +77,64 @@ const typeIcons = {
   lending: ShieldCheck,
   lp: ArrowRightLeft,
 };
+
+function SkrRewardsCalculator() {
+  const [skrAmount, setSkrAmount] = useState('1000');
+
+  const amount = Math.max(0, parseFloat(skrAmount) || 0);
+  const apy = SKR_STAKING_APY / 100;
+
+  const calcRewards = useCallback((principal: number, months: number) => {
+    // Compound monthly
+    const r = apy / 12;
+    return principal * Math.pow(1 + r, months) - principal;
+  }, [apy]);
+
+  const rewards1m = calcRewards(amount, 1);
+  const rewards3m = calcRewards(amount, 3);
+  const rewards1y = calcRewards(amount, 12);
+
+  return (
+    <div className="p-2.5 bg-gray-900/50 rounded-xl space-y-2.5">
+      <div className="flex items-center gap-1.5">
+        <Calculator className="w-3.5 h-3.5 text-violet-400" />
+        <h4 className="text-violet-300 text-xs font-semibold">Rewards Calculator</h4>
+      </div>
+      <div>
+        <label className="text-gray-500 text-xs mb-1 block">Your SKR amount</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={skrAmount}
+            onChange={(e) => setSkrAmount(e.target.value)}
+            min="0"
+            placeholder="1000"
+            className="flex-1 bg-gray-800/80 border border-gray-700/50 rounded-lg px-2.5 py-1.5 text-white text-sm focus:outline-none focus:border-violet-500/50 w-full"
+          />
+          <span className="text-gray-400 text-xs font-medium flex-shrink-0">SKR</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {[
+          { label: '1 month', rewards: rewards1m },
+          { label: '3 months', rewards: rewards3m },
+          { label: '1 year', rewards: rewards1y },
+        ].map(({ label, rewards }) => (
+          <div key={label} className="bg-violet-900/20 border border-violet-800/30 rounded-lg p-2 text-center">
+            <div className="text-violet-300 text-xs font-bold">
+              +{rewards < 1 ? rewards.toFixed(3) : rewards.toFixed(1)}
+            </div>
+            <div className="text-gray-500 text-xs mt-0.5">SKR</div>
+            <div className="text-gray-600 text-[10px] mt-0.5">{label}</div>
+          </div>
+        ))}
+      </div>
+      <p className="text-gray-600 text-[10px]">
+        Based on {SKR_STAKING_APY}% APY, compounded monthly. Actual rewards may vary.
+      </p>
+    </div>
+  );
+}
 
 export function YieldBoard() {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -193,6 +251,7 @@ export function YieldBoard() {
                 <span className="text-gray-400 text-xs">Mint: SKRb…hW3</span>
               </div>
             </div>
+            <SkrRewardsCalculator />
             <a
               href={SKR_STAKING_URL}
               target="_blank"
