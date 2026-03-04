@@ -2,10 +2,29 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown, RefreshCw, Calculator,
+  Landmark, ArrowRightLeft, ChevronRight, TrendingUp, Info, ShieldCheck, Smartphone, ExternalLink, ChevronDown, RefreshCw, Calculator, Users,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SKR_STAKING_URL, SKR_STAKING_APY } from '@/lib/solana';
+
+interface Guardian {
+  name: string;
+  address: string;
+  commission: number;
+  delegated: string;
+  uptime: number;
+  appsVerified: number;
+  rank: number;
+}
+
+// Top Guardian validators — illustrative data based on Solana Mobile Guardian program
+const GUARDIANS: Guardian[] = [
+  { name: 'Helius Guardian', address: 'HeLiUS3...xB9', commission: 5, delegated: '12.4M SKR', uptime: 99.9, appsVerified: 847, rank: 1 },
+  { name: 'Triton Guardian', address: 'Tri7oN1...mK2', commission: 7, delegated: '9.8M SKR', uptime: 99.8, appsVerified: 621, rank: 2 },
+  { name: 'Solana FM', address: 'SoFM77...pX4', commission: 8, delegated: '8.2M SKR', uptime: 99.7, appsVerified: 502, rank: 3 },
+  { name: 'Figment', address: 'Fig3nt...wQ1', commission: 10, delegated: '6.1M SKR', uptime: 99.6, appsVerified: 388, rank: 4 },
+  { name: 'P2P Guardian', address: 'P2PGd...rL8', commission: 6, delegated: '5.9M SKR', uptime: 99.5, appsVerified: 274, rank: 5 },
+];
 
 interface YieldOpportunity {
   protocol: string;
@@ -77,6 +96,97 @@ const typeIcons = {
   lending: ShieldCheck,
   lp: ArrowRightLeft,
 };
+
+function GuardianSelector() {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'rank' | 'commission' | 'uptime'>('rank');
+
+  const sorted = [...GUARDIANS].sort((a, b) => {
+    if (sortBy === 'commission') return a.commission - b.commission;
+    if (sortBy === 'uptime') return b.uptime - a.uptime;
+    return a.rank - b.rank;
+  });
+
+  return (
+    <div className="p-2.5 bg-gray-900/50 rounded-xl space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-violet-400" />
+          <h4 className="text-violet-300 text-xs font-semibold">Choose a Guardian</h4>
+        </div>
+        <div className="flex gap-1">
+          {(['rank', 'commission', 'uptime'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setSortBy(s)}
+              className={clsx(
+                'text-[10px] px-1.5 py-0.5 rounded-md transition-colors',
+                sortBy === s ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-500 hover:text-gray-300'
+              )}
+            >
+              {s === 'rank' ? 'Top' : s === 'commission' ? 'Fee↑' : 'Uptime↑'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {sorted.map((g) => (
+          <button
+            key={g.address}
+            onClick={() => setSelected(selected === g.rank ? null : g.rank)}
+            className={clsx(
+              'w-full text-left rounded-lg p-2 transition-all border',
+              selected === g.rank
+                ? 'bg-violet-900/40 border-violet-500/50'
+                : 'bg-gray-800/60 border-gray-700/30 hover:border-gray-600/50'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-600 w-3">#{g.rank}</span>
+                <div>
+                  <span className="text-white text-xs font-medium">{g.name}</span>
+                  <div className="text-gray-600 text-[10px] font-mono">{g.address}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-violet-300 text-xs font-semibold">{g.commission}% fee</div>
+                <div className="text-gray-500 text-[10px]">{g.uptime}% up</div>
+              </div>
+            </div>
+            {selected === g.rank && (
+              <div className="mt-2 pt-2 border-t border-gray-700/50 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-violet-300 text-xs font-bold">{g.delegated}</div>
+                  <div className="text-gray-600 text-[10px]">Delegated</div>
+                </div>
+                <div>
+                  <div className="text-emerald-400 text-xs font-bold">{g.appsVerified}</div>
+                  <div className="text-gray-600 text-[10px]">Apps verified</div>
+                </div>
+                <div>
+                  <div className="text-violet-300 text-xs font-bold">{(SKR_STAKING_APY * (1 - g.commission / 100)).toFixed(1)}%</div>
+                  <div className="text-gray-600 text-[10px]">Net APY</div>
+                </div>
+                <a
+                  href={`${SKR_STAKING_URL}?validator=${g.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="col-span-3 mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 transition-colors text-white text-xs font-medium"
+                >
+                  Delegate to {g.name}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+      <p className="text-gray-700 text-[10px]">Data illustrative — verify on stake.solanamobile.com</p>
+    </div>
+  );
+}
 
 function SkrRewardsCalculator() {
   const [skrAmount, setSkrAmount] = useState('1000');
@@ -251,6 +361,7 @@ export function YieldBoard() {
                 <span className="text-gray-400 text-xs">Mint: SKRb…hW3</span>
               </div>
             </div>
+            <GuardianSelector />
             <SkrRewardsCalculator />
             <a
               href={SKR_STAKING_URL}
