@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -92,7 +92,7 @@ function PortfolioSparkline({ totalUsd }: { totalUsd: number }) {
           {isUp ? '+' : ''}{change.toFixed(2)}%
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-14" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-14" preserveAspectRatio="none" role="img" aria-label={`Portfolio chart: ${isUp ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}% over 24 hours`}>
         <defs>
           <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={isUp ? '#34d399' : '#f87171'} stopOpacity="0.3" />
@@ -149,7 +149,7 @@ function HealthScoreRing({ score, label, color }: { score: number; label: string
   return (
     <div className="flex items-center gap-4">
       <div className="relative w-16 h-16 flex-shrink-0">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64" role="img" aria-label={`Health score: ${score} out of 100, ${label}`}>
           <circle cx="32" cy="32" r={r} fill="none" strokeWidth="5" className="stroke-gray-800" />
           <circle
             cx="32" cy="32" r={r} fill="none" strokeWidth="5"
@@ -325,21 +325,23 @@ export function DashboardView() {
   const isDemo = searchParams.get('demo') === 'true';
   const [walletState, setWalletState] = useState<WalletState | null>(isDemo ? DEMO_WALLET_STATE : null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [seekerInfo, setSeekerInfo] = useState<SeekerInfo>({ isSeeker: false, features: [] });
 
   const fetchWalletState = useCallback(async () => {
     if (!publicKey) return;
     setLoading(true);
+    setFetchError(null);
     try {
       const state = await getWalletState(publicKey.toString(), NETWORK);
       setWalletState(state);
-    } catch (err) {
-      console.error('Failed to fetch wallet state:', err);
+    } catch {
+      if (!walletState) setFetchError('Failed to load wallet data. Check your connection.');
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, walletState]);
 
   useEffect(() => {
     setSeekerInfo(detectSeeker());
@@ -362,12 +364,24 @@ export function DashboardView() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const totalUsd = useMemo(() => walletState ? computeTotalUsd(walletState) : 0, [walletState]);
+  const healthScore = useMemo(() => walletState ? computeHealthScore(walletState) : { score: 0, label: '', color: '' }, [walletState]);
+
   if (!walletState) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Loading wallet...</p>
+          {fetchError ? (
+            <>
+              <p className="text-gray-400 text-sm">{fetchError}</p>
+              <button onClick={fetchWalletState} className="mt-3 text-sm text-violet-400 hover:text-violet-300 font-medium">Retry</button>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">Loading wallet...</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -429,6 +443,7 @@ export function DashboardView() {
           <p className="text-gray-400 text-xs">Solana {NETWORK === 'mainnet' ? 'Mainnet' : 'Devnet'}</p>
           <button
             onClick={copyAddress}
+            aria-label="Copy wallet address"
             className="flex items-center gap-1.5 text-white font-mono text-sm mt-0.5"
           >
             {truncateAddress(walletState.address)}
@@ -452,7 +467,7 @@ export function DashboardView() {
       <div className="glass rounded-3xl p-6 mb-4 bg-gradient-to-br from-violet-950/40 to-purple-950/20">
         <p className="text-gray-400 text-xs mb-1">Total Balance</p>
         <div className="text-4xl font-bold text-white mb-1">
-          {formatUsd(computeTotalUsd(walletState))}
+          {formatUsd(totalUsd)}
         </div>
         <div className="flex items-center gap-1.5 text-gray-300">
           <span className="text-sm font-medium">{formatSol(walletState.solBalance)}</span>
@@ -475,11 +490,11 @@ export function DashboardView() {
       </div>
 
       {/* Portfolio Sparkline */}
-      <PortfolioSparkline totalUsd={computeTotalUsd(walletState)} />
+      <PortfolioSparkline totalUsd={totalUsd} />
 
       {/* Portfolio Health Score */}
       <div className="glass rounded-2xl p-4 mb-4">
-        <HealthScoreRing {...computeHealthScore(walletState)} />
+        <HealthScoreRing {...healthScore} />
       </div>
 
       {/* Aurora Portfolio Insight */}

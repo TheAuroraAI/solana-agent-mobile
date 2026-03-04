@@ -85,6 +85,8 @@ export function YieldBoard() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [usingFallback, setUsingFallback] = useState(false);
+
   const fetchRates = async () => {
     setLoading(true);
     try {
@@ -94,10 +96,13 @@ export function YieldBoard() {
         if (data.rates?.length > 0) {
           setOpportunities(data.rates);
           setLastUpdated(data.lastUpdated);
+          setUsingFallback(false);
         }
+      } else {
+        setUsingFallback(true);
       }
     } catch {
-      // Keep fallback rates
+      setUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -112,11 +117,13 @@ export function YieldBoard() {
           Yield Opportunities
         </h2>
         <div className="flex items-center gap-2">
-          {lastUpdated && (
+          {lastUpdated ? (
             <span className="text-gray-600 text-xs">
               Updated {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
-          )}
+          ) : usingFallback ? (
+            <span className="text-amber-500/70 text-xs">Cached rates</span>
+          ) : null}
           <button
             onClick={fetchRates}
             disabled={loading}

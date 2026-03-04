@@ -168,21 +168,23 @@ function WalletCard({ wallet, onClone }: { wallet: WhaleWallet; onClone: (w: Wha
 export function WalletClone({ demo }: { demo: boolean }) {
   const [wallets, setWallets] = useState<WhaleWallet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [cloneTarget, setCloneTarget] = useState<WhaleWallet | null>(null);
 
   const fetchWallets = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const res = await fetch(`/api/clone${demo ? '?demo=true' : ''}`);
       if (!res.ok) throw new Error('fetch failed');
       const data = await res.json();
       setWallets(data.wallets ?? []);
     } catch {
-      // keep existing
+      if (wallets.length === 0) setFetchError(true);
     } finally {
       setLoading(false);
     }
-  }, [demo]);
+  }, [demo, wallets.length]);
 
   useEffect(() => {
     fetchWallets();
@@ -240,6 +242,12 @@ export function WalletClone({ demo }: { demo: boolean }) {
           {[1, 2, 3].map(i => (
             <div key={i} className="rounded-2xl bg-gray-800/40 h-32 animate-pulse" />
           ))}
+        </div>
+      ) : fetchError ? (
+        <div className="glass rounded-2xl p-6 text-center">
+          <p className="text-gray-400 text-sm">Failed to load wallets</p>
+          <p className="text-gray-600 text-xs mt-1">Check your connection and try again</p>
+          <button onClick={() => fetchWallets()} className="mt-3 text-xs text-violet-400 hover:text-violet-300 font-medium">Retry</button>
         </div>
       ) : wallets.length === 0 ? (
         <div className="glass rounded-2xl p-6 text-center">

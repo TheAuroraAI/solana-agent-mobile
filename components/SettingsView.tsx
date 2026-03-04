@@ -45,9 +45,12 @@ function SettingRow({ label, children, icon: Icon, iconColor = 'text-gray-400' }
   );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
     <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className={clsx(
         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
@@ -203,6 +206,7 @@ export function SettingsView() {
               <Toggle
                 checked={network === 'mainnet'}
                 onChange={(v) => update('network', v ? 'mainnet' : 'devnet')}
+                label="Toggle mainnet/devnet"
               />
             </div>
           </SettingRow>

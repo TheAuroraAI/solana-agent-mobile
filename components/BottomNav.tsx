@@ -40,6 +40,7 @@ export function BottomNav() {
                 key={href}
                 href={`${href}${demoSuffix}`}
                 onClick={() => navigator.vibrate?.(10)}
+                aria-current={isActive ? 'page' : undefined}
                 className={clsx(
                   'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
                   isActive
@@ -56,6 +57,8 @@ export function BottomNav() {
           {/* More button */}
           <button
             onClick={() => { navigator.vibrate?.(10); setSheetOpen(true); }}
+            aria-expanded={sheetOpen}
+            aria-haspopup="dialog"
             className={clsx(
               'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
               isMoreActive
@@ -76,6 +79,9 @@ export function BottomNav() {
           onClick={() => setSheetOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
             className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl border-t border-gray-700/50 animate-[fadeUp_0.2s_ease-out]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -87,6 +93,7 @@ export function BottomNav() {
             {/* Close button */}
             <button
               onClick={() => setSheetOpen(false)}
+              aria-label="Close menu"
               className="absolute top-3 right-4 p-1.5 rounded-full bg-gray-800 text-gray-400"
             >
               <X className="w-4 h-4" />

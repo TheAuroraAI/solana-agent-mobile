@@ -23,9 +23,18 @@ export const metadata: Metadata = {
     title: "Aurora Agent",
   },
   openGraph: {
-    title: "Aurora Agent",
-    description: "Autonomous Solana wallet AI agent",
+    title: "Aurora Agent — Autonomous Solana Wallet",
+    description: "An AI agent that autonomously manages your Solana wallet, analyzes your portfolio, and executes transactions with your approval.",
     type: "website",
+    url: "https://solana-agent-mobile.vercel.app",
+    siteName: "Aurora Agent",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Aurora Agent — Autonomous Solana Wallet" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aurora Agent — Autonomous Solana Wallet",
+    description: "An AI agent that autonomously manages your Solana wallet, analyzes your portfolio, and executes transactions with your approval.",
+    images: ["/og-image.png"],
   },
 };
 

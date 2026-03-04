@@ -80,11 +80,19 @@ export function PriceTicker({ demo = false }: { demo?: boolean }) {
     if (demo) return;
     fetchPrices().then((p) => setPrices(p.length > 0 ? p : DEMO_PRICES));
     const interval = setInterval(() => {
-      fetchPrices().then((p) => {
-        if (p.length > 0) setPrices(p);
-      });
+      if (document.hidden) return;
+      fetchPrices().then((p) => { if (p.length > 0) setPrices(p); });
     }, 30_000);
-    return () => clearInterval(interval);
+    const onVisibility = () => {
+      if (!document.hidden) {
+        fetchPrices().then((p) => { if (p.length > 0) setPrices(p); });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [demo]);
 
   if (prices.length === 0) return null;

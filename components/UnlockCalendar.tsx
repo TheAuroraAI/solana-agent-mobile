@@ -146,10 +146,12 @@ export function UnlockCalendar() {
   const [unlocks, setUnlocks] = useState<TokenUnlock[]>([]);
   const [stats, setStats] = useState<UnlockStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
   const fetchUnlocks = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const res = await fetch('/api/unlocks');
       if (!res.ok) throw new Error('fetch failed');
@@ -157,11 +159,11 @@ export function UnlockCalendar() {
       setUnlocks(data.unlocks ?? []);
       setStats(data.stats ?? null);
     } catch {
-      // keep existing
+      if (unlocks.length === 0) setFetchError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [unlocks.length]);
 
   useEffect(() => {
     fetchUnlocks();
@@ -224,6 +226,11 @@ export function UnlockCalendar() {
           {[1, 2, 3].map(i => (
             <div key={i} className="rounded-2xl bg-gray-800/40 h-24 animate-pulse" />
           ))}
+        </div>
+      ) : fetchError ? (
+        <div className="glass rounded-2xl p-6 text-center">
+          <p className="text-gray-400 text-sm">Failed to load unlock data</p>
+          <button onClick={() => fetchUnlocks()} className="mt-2 text-xs text-violet-400 hover:text-violet-300 font-medium">Retry</button>
         </div>
       ) : displayed.length === 0 ? (
         <div className="glass rounded-2xl p-6 text-center">

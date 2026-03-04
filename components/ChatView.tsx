@@ -92,7 +92,7 @@ export function ChatView() {
       return;
     }
     if (publicKey) {
-      getWalletState(publicKey.toString(), NETWORK).then(setWalletState).catch(console.error);
+      getWalletState(publicKey.toString(), NETWORK).then(setWalletState).catch(() => {});
     }
   }, [connected, publicKey, router, isDemo]);
 
@@ -313,6 +313,7 @@ export function ChatView() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask Aurora anything..."
+            aria-label="Message Aurora"
             enterKeyHint="send"
             autoCorrect="off"
             autoComplete="off"
@@ -321,6 +322,7 @@ export function ChatView() {
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
+            aria-label="Send message"
             className="w-11 h-11 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
           >
             <Send className="w-4 h-4 text-white" />

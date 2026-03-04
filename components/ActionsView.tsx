@@ -297,8 +297,7 @@ export function ActionsView() {
           });
         }
       }
-    } catch (err) {
-      console.error('Failed to generate actions:', err);
+    } catch {
       setActions([{
         id: 'error',
         type: 'alert',
@@ -398,7 +397,6 @@ export function ActionsView() {
         } else if (errorMsg.includes('slippage')) {
           displayError = 'Price moved too much (slippage exceeded). Try again with a smaller amount.';
         }
-        console.error('Transaction failed:', errorMsg);
         setTxResult({ success: false, error: displayError });
       } finally {
         setExecuting(null);
@@ -506,7 +504,7 @@ export function ActionsView() {
               </div>
             </>
           )}
-          <button onClick={() => setTxResult(null)} className="ml-auto text-gray-500 text-lg leading-none">×</button>
+          <button onClick={() => setTxResult(null)} aria-label="Dismiss" className="ml-auto text-gray-500 text-lg leading-none">×</button>
         </div>
       )}
 

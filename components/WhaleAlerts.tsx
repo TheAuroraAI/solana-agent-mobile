@@ -174,8 +174,15 @@ export function WhaleAlerts({ demo }: { demo: boolean }) {
 
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(() => fetchAlerts(), 20_000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchAlerts();
+    }, 20_000);
+    const onVisibility = () => { if (!document.hidden) fetchAlerts(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [fetchAlerts]);
 
   // Clear "new" highlight after 3s
