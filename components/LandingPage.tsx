@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { Wallet, Zap, Shield, Brain, ChevronRight, PlayCircle } from 'lucide-react';
+import { Wallet, Zap, Shield, Brain, ChevronRight, PlayCircle, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const features = [
@@ -42,8 +42,23 @@ export function LandingPage() {
     }
   }, [connected, publicKey, router]);
 
+  const [solPrice, setSolPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(d => setSolPrice(Number(d?.data?.['So11111111111111111111111111111111111111112']?.price)))
+      .catch(() => {});
+  }, []);
+
   return (
-    <div className="flex flex-col min-h-screen px-6 safe-top">
+    <div className="flex flex-col min-h-screen px-6 safe-top relative overflow-hidden">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-[-50%] left-[-20%] w-[140%] h-[80%] bg-gradient-radial from-violet-900/30 via-transparent to-transparent rounded-full animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute bottom-[-30%] right-[-20%] w-[100%] h-[60%] bg-gradient-radial from-purple-900/20 via-transparent to-transparent rounded-full animate-[pulse_10s_ease-in-out_infinite_2s]" />
+      </div>
+
       {/* Header */}
       <div className="pt-16 pb-8 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 mb-6">
@@ -57,6 +72,14 @@ export function LandingPage() {
         <p className="text-gray-400 text-base leading-relaxed max-w-xs mx-auto">
           Your autonomous AI wallet manager for Solana. Analyze, strategize, execute.
         </p>
+        {/* Live SOL price */}
+        {solPrice && (
+          <div className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-emerald-400 text-xs font-medium">SOL ${solPrice.toFixed(2)}</span>
+            <span className="text-emerald-500/50 text-[10px]">LIVE</span>
+          </div>
+        )}
       </div>
 
       {/* Features */}
