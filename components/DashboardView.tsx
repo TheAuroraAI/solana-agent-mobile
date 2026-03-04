@@ -625,7 +625,7 @@ export function DashboardView() {
       <AutonomyScore />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-1">
         <button
           onClick={() => setShowSend(true)}
           className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
@@ -644,15 +644,15 @@ export function DashboardView() {
           </div>
           <span className="text-white text-xs font-medium">Receive</span>
         </button>
-        <a
-          href={isDemo ? '/chat?demo=true' : '/chat'}
+        <button
+          onClick={startQrScan}
           className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
         >
-          <div className="w-9 h-9 bg-violet-500/20 rounded-xl flex items-center justify-center">
-            <Sparkles className="text-violet-400 w-4 h-4" />
+          <div className="w-9 h-9 bg-sky-500/20 rounded-xl flex items-center justify-center">
+            <ScanLine className="text-sky-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Agent</span>
-        </a>
+          <span className="text-white text-xs font-medium">Scan QR</span>
+        </button>
         <a
           href={isDemo ? '/yield?demo=true' : '/yield'}
           className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
@@ -663,6 +663,10 @@ export function DashboardView() {
           <span className="text-white text-xs font-medium">Yield</span>
         </a>
       </div>
+      {qrScanError && (
+        <p className="text-red-400 text-xs text-center mb-3">{qrScanError}</p>
+      )}
+      <div className="mb-3" />
 
       {/* Send Modal */}
       {showSend && (
@@ -763,10 +767,19 @@ export function DashboardView() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white text-sm font-mono">{token.uiAmount.toFixed(token.uiAmount < 1 ? 4 : 2)}</p>
-                  {(token.symbol === 'USDC' || token.symbol === 'USDT') && (
-                    <p className="text-gray-500 text-xs">${token.uiAmount.toFixed(2)}</p>
-                  )}
+                  <p className="text-white text-sm font-mono">
+                    {token.uiAmount >= 1_000_000_000 ? `${(token.uiAmount / 1_000_000_000).toFixed(2)}B` :
+                     token.uiAmount >= 1_000_000 ? `${(token.uiAmount / 1_000_000).toFixed(2)}M` :
+                     token.uiAmount >= 1_000 ? `${(token.uiAmount / 1_000).toFixed(2)}K` :
+                     token.uiAmount < 1 ? token.uiAmount.toFixed(4) :
+                     token.uiAmount.toFixed(2)}
+                  </p>
+                  {(() => {
+                    const usdVal = estimateTokenUsd(token.symbol, token.uiAmount);
+                    if (usdVal > 0) return <p className="text-gray-500 text-xs">≈ {formatUsd(usdVal)}</p>;
+                    if (token.symbol === 'USDC' || token.symbol === 'USDT') return <p className="text-gray-500 text-xs">${token.uiAmount.toFixed(2)}</p>;
+                    return null;
+                  })()}
                 </div>
               </div>
             ))}

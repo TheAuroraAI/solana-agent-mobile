@@ -19,17 +19,18 @@ export function PullToRefresh({ onRefresh, children, className }: PullToRefreshP
 
   const THRESHOLD = 60;
 
+  // Use window.scrollY (not el.scrollTop) so the container doesn't need
+  // overflow-y:auto — avoids creating a stacking context that hides the
+  // fixed BottomNav on WebKit/mobile.
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const el = containerRef.current;
-    if (!el || el.scrollTop > 0) return;
+    if (window.scrollY > 0) return;
     startY.current = e.touches[0].clientY;
     pulling.current = true;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!pulling.current || refreshing) return;
-    const el = containerRef.current;
-    if (!el || el.scrollTop > 0) {
+    if (window.scrollY > 0) {
       pulling.current = false;
       setPullDistance(0);
       return;
@@ -58,7 +59,7 @@ export function PullToRefresh({ onRefresh, children, className }: PullToRefreshP
   return (
     <div
       ref={containerRef}
-      className={clsx('relative overflow-y-auto', className)}
+      className={clsx('relative', className)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
