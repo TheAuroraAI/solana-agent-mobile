@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { AppShell } from '@/components/AppShell';
 import { HistoryView } from '@/components/HistoryView';
 import { GenericSkeleton } from '@/components/Skeleton';
 
@@ -6,8 +7,10 @@ export const metadata = { title: 'Transaction History — Aurora Agent' };
 
 export default function HistoryPage() {
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <HistoryView />
-    </Suspense>
+    <AppShell>
+      <Suspense fallback={<GenericSkeleton />}>
+        <HistoryView />
+      </Suspense>
+    </AppShell>
   );
 }

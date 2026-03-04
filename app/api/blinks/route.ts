@@ -138,20 +138,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Export popular blink categories for the UI
-export const POPULAR_BLINKS = [
-  {
-    category: 'DeFi',
-    items: [
-      { name: 'Stake SOL via Marinade', url: 'https://marinade.finance/app/staking/?action=true' },
-      { name: 'Jupiter Swap SOL→USDC', url: 'solana-action:https://jup.ag/swap/SOL-USDC' },
-      { name: 'Jito Stake', url: 'solana-action:https://jito.network/stake' },
-    ],
-  },
-  {
-    category: 'NFTs',
-    items: [
-      { name: 'Buy Mad Lads Floor', url: 'solana-action:https://magiceden.io/mint-terminal/mad_lads' },
-    ],
-  },
-];
