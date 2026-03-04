@@ -15,7 +15,7 @@ export function AppShell({ children, showNav = true }: AppShellProps) {
     <ErrorBoundary fallbackMessage="Aurora encountered an error">
       <WalletProvider>
         <div className="min-h-screen bg-gray-950 max-w-md mx-auto relative">
-          <main className={showNav ? 'pb-20' : ''}>{children}</main>
+          <main className={`page-transition ${showNav ? 'pb-20' : ''}`}>{children}</main>
           {showNav && (
             <Suspense>
               <BottomNav />

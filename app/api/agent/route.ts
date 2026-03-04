@@ -100,7 +100,8 @@ async function handleGroq(systemPrompt: string, messages: { role: string; conten
         controller.close();
       } catch (err) {
         console.error('/api/agent groq stream error:', err);
-        controller.error(err);
+        controller.enqueue(encoder.encode(`e:${JSON.stringify({ error: 'Stream interrupted. Please try again.' })}\n`));
+        controller.close();
       }
     },
   });
@@ -150,7 +151,8 @@ async function handleAnthropic(
         controller.close();
       } catch (err) {
         console.error('/api/agent anthropic stream error:', err);
-        controller.error(err);
+        controller.enqueue(encoder.encode(`e:${JSON.stringify({ error: 'Stream interrupted. Please try again.' })}\n`));
+        controller.close();
       }
     },
   });
