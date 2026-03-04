@@ -1,11 +1,11 @@
 import Groq from 'groq-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 
-const SYSTEM_PROMPT = `You are Aurora, an autonomous AI agent that manages Solana wallets. You are direct, analytical, and proactive — you don't just answer questions, you identify opportunities and risks the user hasn't asked about yet.
+const SYSTEM_PROMPT_BASE = `You are Aurora, an autonomous AI agent that manages Solana wallets. You are direct, analytical, and proactive — you don't just answer questions, you identify opportunities and risks the user hasn't asked about yet.
 
 YOUR CAPABILITIES:
 - Deep portfolio analysis: composition, concentration risk, correlation exposure
-- DeFi strategy: liquid staking (Jito ~7.5% APY, Marinade ~6.8%), Jupiter swaps, Kamino vaults
+- DeFi strategy: liquid staking, Jupiter swaps, Kamino vaults
 - Risk assessment: volatility exposure, gas reserve adequacy, impermanent loss
 - Market context: SOL ecosystem trends, protocol comparisons, yield opportunities
 - Transaction analysis: pattern detection, unusual activity flagging
@@ -15,7 +15,6 @@ SOLANA DEFI KNOWLEDGE:
 - Liquid staking: Jito (jitoSOL, best for MEV rewards), Marinade (mSOL, most established), BlazeStake (bSOL)
 - DEX: Jupiter aggregator (routes across Orca, Raydium, Phoenix for best price)
 - Lending: Kamino (auto-compounding), MarginFi (lending/borrowing, points)
-- Stablecoin yield: Kamino USDC ~8-12% APY, MarginFi USDC ~5-8% APY
 - NFT: Tensor (leading marketplace), Magic Eden
 - SKR Guardian Staking: Stake SKR (Solana Mobile's native token) to Guardian validators. 20.2% APY. 48h cooldown to unstake. Stake at stake.solanamobile.com. Mint: SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3. Staking program: SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ.
   - Guardians are validators that verify and curate dApps in the Solana Mobile dApp Store
@@ -38,9 +37,25 @@ FORMATTING:
 - Keep responses under 200 words unless the user asks for detail
 - Never use code blocks for non-code content`;
 
+function buildApyLine(yieldRates?: Record<string, number>): string {
+  if (yieldRates && Object.keys(yieldRates).length > 0) {
+    const parts: string[] = [];
+    if (typeof yieldRates['Jito'] === 'number') parts.push(`Jito ${yieldRates['Jito'].toFixed(1)}%`);
+    if (typeof yieldRates['Marinade'] === 'number') parts.push(`Marinade ${yieldRates['Marinade'].toFixed(1)}%`);
+    if (typeof yieldRates['Kamino'] === 'number') parts.push(`Kamino USDC ${yieldRates['Kamino'].toFixed(1)}%`);
+    if (typeof yieldRates['Jupiter'] === 'number') parts.push(`Jupiter JLP ${yieldRates['Jupiter'].toFixed(1)}%`);
+    if (typeof yieldRates['Drift'] === 'number') parts.push(`Drift USDC ${yieldRates['Drift'].toFixed(1)}%`);
+    if (parts.length > 0) {
+      return `Current live APYs: ${parts.join(', ')}`;
+    }
+  }
+  // Hardcoded fallback when no live rates are provided
+  return 'DeFi yields (approximate): Jito ~7.5% APY, Marinade ~6.8%, Kamino USDC ~8-12% APY, MarginFi USDC ~5-8% APY, Jupiter JLP ~28% APY, Drift USDC ~14% APY';
+}
+
 export async function POST(req: Request) {
   try {
-    const { messages, walletState, anthropicApiKey, chatModel, defiProtocols } = await req.json();
+    const { messages, walletState, anthropicApiKey, chatModel, defiProtocols, yieldRates } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return Response.json({ error: 'messages array required' }, { status: 400 });
@@ -50,7 +65,14 @@ export async function POST(req: Request) {
       ? defiProtocols
       : ['Jito', 'Marinade', 'Jupiter'];
 
-    const systemPrompt = `${SYSTEM_PROMPT}
+    const apyLine = buildApyLine(
+      yieldRates && typeof yieldRates === 'object' ? yieldRates as Record<string, number> : undefined
+    );
+
+    const systemPrompt = `${SYSTEM_PROMPT_BASE}
+
+CURRENT YIELD RATES:
+${apyLine}
 
 CURRENT WALLET STATE:
 ${walletState ? JSON.stringify(walletState, null, 2) : 'No wallet connected yet.'}

@@ -8,16 +8,28 @@ interface DataPoint {
   solPrice: number;
 }
 
-// Fetch 7-day SOL price history from CoinGecko (no key needed)
+// Fetch 7-day SOL price history from CoinCap (free, no key, good rate limits)
 async function fetchSolPriceHistory(): Promise<Array<[number, number]>> {
-  const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=7&interval=daily';
-  const res = await fetch(url, {
-    headers: { 'Accept': 'application/json' },
-    signal: AbortSignal.timeout(6000),
-  });
-  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
-  const data = await res.json() as { prices: Array<[number, number]> };
-  return data.prices;
+  const end = Date.now();
+  const start = end - 7 * 24 * 60 * 60 * 1000;
+  const url = `https://api.coincap.io/v2/assets/solana/history?interval=d1&start=${start}&end=${end}`;
+  
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`CoinCap ${res.status}`);
+    const data = await res.json() as { data: Array<{ time: number; priceUsd: string }> };
+    return data.data.map(d => [d.time, parseFloat(d.priceUsd)]);
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 // GET /api/portfolio-history?wallet=ADDRESS&solBalance=X&tokenUsd=Y
@@ -43,17 +55,24 @@ export async function GET(req: NextRequest) {
     const prices = await fetchSolPriceHistory();
     const points: DataPoint[] = prices.map(([ms, price]) => ({
       timestamp: ms / 1000,
-      // Estimate portfolio value at each historical SOL price
-      // (tokens are marked at current value as we don't have historical token prices)
       totalUsd: solBalance * price + tokenUsd,
       solPrice: price,
     }));
 
     return NextResponse.json({ points, source: 'live' });
   } catch {
-    // Fallback: generate synthetic history from current balance
+    // Fallback: fetch current SOL price from Jupiter to seed the estimate
+    let currentSolPrice = 160;
+    try {
+      const jupRes = await fetch('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112');
+      if (jupRes.ok) {
+        const jupData = await jupRes.json() as { data: Record<string, { price: string }> };
+        const p = jupData.data['So11111111111111111111111111111111111111112']?.price;
+        if (p) currentSolPrice = parseFloat(p);
+      }
+    } catch { /* keep default */ }
+
     const now = Date.now();
-    const currentSolPrice = 170; // rough estimate if CoinGecko fails
     const points: DataPoint[] = Array.from({ length: 8 }, (_, i) => {
       const ts = now - (7 - i) * 86_400_000;
       const variance = 1 + (Math.random() - 0.5) * 0.12;

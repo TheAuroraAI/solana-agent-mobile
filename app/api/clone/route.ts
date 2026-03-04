@@ -21,6 +21,19 @@ const KNOWN_TOKENS: Record<string, { symbol: string; decimals: number }> = {
   EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: { symbol: 'WIF', decimals: 6 },
 };
 
+// Staked SOL variants that should use SOL price
+const STAKED_SOL_MINTS = new Set([
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // jitoSOL
+  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',  // bSOL
+]);
+
+// Stablecoins that use face value ($1)
+const STABLECOIN_MINTS = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+]);
+
 interface TokenHolding {
   mint: string;
   symbol: string;
@@ -100,6 +113,28 @@ const DEMO_CLONE_DATA: CloneData[] = [
   },
 ];
 
+// Batch-fetch token prices from Jupiter price API
+async function fetchJupiterPrices(mints: string[]): Promise<Record<string, number>> {
+  if (mints.length === 0) return {};
+  try {
+    const ids = mints.join(',');
+    const res = await fetch(`https://api.jup.ag/price/v2?ids=${ids}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return {};
+    const data = await res.json() as { data: Record<string, { price: string } | null> };
+    const prices: Record<string, number> = {};
+    for (const [mint, entry] of Object.entries(data.data)) {
+      if (entry?.price) {
+        prices[mint] = parseFloat(entry.price);
+      }
+    }
+    return prices;
+  } catch {
+    return {};
+  }
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const demo = url.searchParams.get('demo') === 'true';
@@ -146,21 +181,39 @@ export async function GET(request: Request) {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 8);
 
-    // Estimate percentages
+    // Fetch SOL price and Jupiter prices for all non-stablecoin, non-staked-SOL mints
     const solPrice = await getSolPrice();
-    const totalEstimate = solBalance * solPrice + tokens.reduce((s, t) => {
-      if (t.symbol === 'USDC' || t.symbol === 'USDT') return s + t.amount;
-      return s + t.amount * 0.01; // rough estimate
-    }, 0);
+
+    const mintsToFetch = tokens
+      .map(t => t.mint)
+      .filter(m => !STABLECOIN_MINTS.has(m) && !STAKED_SOL_MINTS.has(m));
+
+    const jupPrices = await fetchJupiterPrices(mintsToFetch);
+
+    // Compute token USD values using real prices
+    const tokenUsdValues = tokens.map(t => {
+      if (STABLECOIN_MINTS.has(t.mint)) return t.amount;           // $1 face value
+      if (STAKED_SOL_MINTS.has(t.mint)) return t.amount * solPrice; // ~1:1 with SOL
+      return t.amount * (jupPrices[t.mint] ?? 0);                   // live Jupiter price
+    });
+
+    const totalTokenUsd = tokenUsdValues.reduce((s, v) => s + v, 0);
+    const totalEstimate = solBalance * solPrice + totalTokenUsd;
 
     const solPct = totalEstimate > 0 ? Math.round((solBalance * solPrice / totalEstimate) * 100) : 100;
+
+    // Assign pct to each token
+    const tokensWithPct: TokenHolding[] = tokens.map((t, i) => ({
+      ...t,
+      pct: totalEstimate > 0 ? Math.round((tokenUsdValues[i] / totalEstimate) * 100) : 0,
+    }));
 
     const result: CloneData = {
       address: wallet,
       label: 'Custom Wallet',
       solBalance,
       solPct,
-      tokens,
+      tokens: tokensWithPct,
       totalValueUsd: totalEstimate,
       lastActive: Math.floor(Date.now() / 1000),
       pnl7d: 0,
