@@ -13,6 +13,7 @@ import {
   loadSettings, saveSettings, AppSettings,
   CHAT_MODELS, ACTIONS_MODELS, DEFI_PROTOCOLS, getModelProvider,
 } from '@/lib/settings';
+import { PriceAlertsSection } from './PriceAlertsSection';
 
 function SectionHeader({ label }: { label: string }) {
   return (
@@ -375,6 +376,12 @@ export function SettingsView() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Price Alerts */}
+      <div className="mb-6">
+        <SectionHeader label="Price Alerts" />
+        <PriceAlertsSection />
       </div>
 
       {/* Disconnect */}

@@ -28,6 +28,7 @@ import {
 import { detectSeeker, type SeekerInfo } from '@/lib/seeker';
 import { getActionStats } from '@/lib/action-log';
 import { Shield, Bot } from 'lucide-react';
+import { checkAlerts, fireNotification } from '@/lib/alerts';
 
 const NETWORK = getNetwork();
 
@@ -418,16 +419,30 @@ export function DashboardView() {
     setSeekerInfo(detectSeeker());
   }, []);
 
-  // Fetch real SOL 24h price change
+  // Fetch real SOL 24h price change + check price alerts
   useEffect(() => {
     fetch('/api/prices')
       .then((r) => r.json())
-      .then((d) => {
+      .then((d: { prices?: Record<string, { usd: number; change24h: number }> }) => {
         if (typeof d?.prices?.SOL?.change24h === 'number') {
           setSolChange24h(d.prices.SOL.change24h);
         }
+        // Check price alerts with live prices
+        if (d?.prices) {
+          const currentPrices: Record<string, number> = {};
+          for (const [sym, info] of Object.entries(d.prices)) {
+            currentPrices[sym] = info.usd;
+          }
+          const triggered = checkAlerts(currentPrices);
+          for (const alert of triggered) {
+            fireNotification(
+              `${alert.token} price alert`,
+              `${alert.token} is now ${alert.direction === 'above' ? 'above' : 'below'} $${alert.targetPrice.toLocaleString()}`
+            );
+          }
+        }
       })
-      .catch(() => {}); // silent fail — sparkline shows "loading…" if null
+      .catch(() => {}); // silent fail
   }, []);
 
   useEffect(() => {
