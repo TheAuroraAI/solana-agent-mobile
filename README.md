@@ -111,16 +111,20 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 6. **Whale Watch** → Spot large transactions → tap "Copy Trade" → swap pre-loaded in Actions, ready to sign
 7. **Approve** → Tap "Sign & Send" — Aurora builds a Jupiter swap transaction, Phantom signs it, executes on-chain
 8. **Yield** → Browse DeFi opportunities including SKR Guardian Staking (20.2% APY) with delegation guide
+9. **Share** → Tap "Share" in Quick Actions → generates branded portfolio card → download PNG or share natively
+10. **Token Sniper** → Browse new Solana token launches → one-tap "Snipe" routes to Actions for instant buy
 
 ## Architecture
 
 ```
-Browser (Mobile PWA — 17 pages)
+Browser (Mobile PWA — 19 pages)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
 ├── Dashboard → Portfolio + 7d Chart + AI Briefing + 24h P&L + Health Score + Insight
+│   └── Share Card → "Share My Report" exports SVG/PNG portfolio card (Web Share API)
 ├── Agent Chat → Streaming AI (Claude Sonnet 4.6 or Groq) with DeFi + SKR knowledge
 ├── Actions → AI Proposals: Stake/Swap/Analysis/Alert + Copy Trade mode (Haiku 4.5 or Groq)
 ├── Rebalance → Target allocation sliders + auto trade plan → routes to Actions for signing
+├── Token Sniper → New Solana launches: DexScreener boosts + buy pressure + one-tap snipe
 ├── Blinks → Solana Actions executor — paste any solana-action: URL, execute in-app
 ├── Whales → Real-time whale tracker with "Copy Trade" one-tap swap pre-fill
 ├── NFTs → NFT gallery with collection filters, floor prices, grid/list views
@@ -134,7 +138,7 @@ Browser (Mobile PWA — 17 pages)
 ├── Settings → Network, RPC, AI models (BYOK), DeFi protocols, API keys
 └── Policies → Automation rules evaluated against live wallet state
 
-API Routes (Next.js — 14 routes)
+API Routes (Next.js — 16 routes)
 ├── /api/agent → Streaming AI with portfolio + SKR staking context
 ├── /api/actions → DeFi action generation with protocol awareness
 ├── /api/briefing → AI-generated market briefing (Groq, 1h cache)
@@ -148,7 +152,9 @@ API Routes (Next.js — 14 routes)
 ├── /api/history → On-chain tx parsing with protocol identification
 ├── /api/trending → Solana ecosystem token rankings (CoinGecko)
 ├── /api/search → Token search with live prices
-└── /api/unlocks → Token vesting schedule data
+├── /api/unlocks → Token vesting schedule data
+├── /api/sniper → New Solana token launches (DexScreener boosts + profiles, 1m cache)
+└── /api/share-card → SVG portfolio report generator (wallet, balance, holdings, health)
 ```
 
 ## Disclaimer
