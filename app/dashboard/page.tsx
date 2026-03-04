@@ -3,6 +3,8 @@ import { AppShell } from '@/components/AppShell';
 import { DashboardView } from '@/components/DashboardView';
 import { DashboardSkeleton } from '@/components/Skeleton';
 
+export const metadata = { title: 'Dashboard — Aurora Agent' };
+
 export default function DashboardPage() {
   return (
     <AppShell>

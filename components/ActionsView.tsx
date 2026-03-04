@@ -259,6 +259,7 @@ export function ActionsView() {
   const [actions, setActions] = useState<AgentAction[]>(isDemo ? DEMO_ACTIONS : FALLBACK_ACTIONS);
   const [executing, setExecuting] = useState<string | null>(null);
   const [txResult, setTxResult] = useState<{ success: boolean; sig?: string; error?: string } | null>(null);
+  const [previewAction, setPreviewAction] = useState<AgentAction | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(isDemo);
 
@@ -324,6 +325,14 @@ export function ActionsView() {
 
     const isExecutable = (action.type === 'stake' || action.type === 'swap' || action.type === 'transfer') &&
       action.details.amount;
+
+    // Show preview modal for executable actions (unless already confirmed)
+    if (isExecutable && !previewAction) {
+      setPreviewAction(action);
+      return;
+    }
+    // Clear preview if it was set
+    setPreviewAction(null);
 
     if (isExecutable) {
       setExecuting(id);
@@ -531,6 +540,72 @@ export function ActionsView() {
               Generate new actions
             </button>
           )}
+        </div>
+      )}
+
+      {/* Transaction Preview Modal */}
+      {previewAction && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-gray-900 rounded-t-3xl border-t border-gray-700/50 p-6 animate-[fadeUp_0.2s_ease-out]">
+            <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-5" />
+            <h3 className="text-white text-lg font-bold mb-4">Confirm Transaction</h3>
+
+            <div className="space-y-3 mb-5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Action</span>
+                <span className="text-white font-medium capitalize">{previewAction.type}</span>
+              </div>
+              {previewAction.details.amount && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Amount</span>
+                  <span className="text-white font-medium">{previewAction.details.amount} SOL</span>
+                </div>
+              )}
+              {previewAction.details.protocol && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Protocol</span>
+                  <span className="text-white font-medium">{previewAction.details.protocol}</span>
+                </div>
+              )}
+              {previewAction.details.expectedApy && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Expected APY</span>
+                  <span className="text-emerald-400 font-medium">{previewAction.details.expectedApy}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Est. Fee</span>
+                <span className="text-white font-medium">{previewAction.details.estimatedGas ?? '~0.000005 SOL'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Risk</span>
+                <RiskBadge risk={(previewAction.details.risk as 'low' | 'medium' | 'high') ?? 'medium'} />
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Slippage</span>
+                <span className="text-white font-medium">0.5%</span>
+              </div>
+            </div>
+
+            <p className="text-gray-500 text-xs mb-5 leading-relaxed">
+              {previewAction.details.reasoning?.slice(0, 150)}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPreviewAction(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleApprove(previewAction.id)}
+                className="flex-1 py-3 rounded-xl bg-violet-600 text-white font-medium text-sm active:scale-95 transition-transform"
+              >
+                Confirm & Sign
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

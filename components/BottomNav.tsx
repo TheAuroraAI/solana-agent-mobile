@@ -49,6 +49,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={`${href}${demoSuffix}`}
+              onClick={() => navigator.vibrate?.(10)}
               className={clsx(
                 'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
                 isActive
@@ -65,7 +66,7 @@ export function BottomNav() {
         {/* More menu */}
         <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setMoreOpen(!moreOpen)}
+            onClick={() => { navigator.vibrate?.(10); setMoreOpen(!moreOpen); }}
             className={clsx(
               'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors',
               isMoreActive

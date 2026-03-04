@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { WhaleAlerts } from './WhaleAlerts';
 import { WalletClone } from './WalletClone';
+import { PullToRefresh } from './PullToRefresh';
 
 interface WhaleAlert {
   amountUsd: number;
@@ -37,6 +38,7 @@ export function WhalesView() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   return (
+    <PullToRefresh onRefresh={fetchStats}>
     <div className="safe-top px-4 pt-6 pb-4">
       <div className="mb-5">
         <h1 className="text-white text-xl font-bold">Whale Watch</h1>
@@ -75,5 +77,6 @@ export function WhalesView() {
 
       <WhaleAlerts demo={isDemo} />
     </div>
+    </PullToRefresh>
   );
 }

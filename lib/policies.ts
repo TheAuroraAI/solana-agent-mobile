@@ -175,24 +175,67 @@ export function evaluatePolicies(
       }
     }
 
-    if (policy.id === 'max_sol_exposure') {
-      const maxPct = policy.params.maxPct as number;
-      if (wallet.solPct > maxPct) {
+    if (policy.id === 'max_sol_exposure' || (policy.trigger === 'percentage' && policy.params.maxPct !== undefined)) {
+      const maxPct = (policy.params.maxPct ?? policy.params.targetPct ?? 70) as number;
+      const asset = (policy.params.asset as string)?.toLowerCase() ?? 'sol';
+      const currentPct = asset === 'sol' ? wallet.solPct : asset === 'stablecoin' ? wallet.stablePct : wallet.solPct;
+      if (currentPct > maxPct) {
         return {
           policy,
           status: 'triggered',
           statusLabel: 'Triggered',
-          statusDetail: `SOL at ${wallet.solPct.toFixed(0)}% of portfolio — exceeds ${maxPct}% cap.`,
-          recommendedAction: `Rebalance to reduce SOL by ${(wallet.solPct - maxPct).toFixed(0)}%`,
+          statusDetail: `${asset.toUpperCase()} at ${currentPct.toFixed(0)}% of portfolio — exceeds ${maxPct}% cap.`,
+          recommendedAction: `Rebalance to reduce ${asset.toUpperCase()} by ${(currentPct - maxPct).toFixed(0)}%`,
         };
       } else {
         return {
           policy,
           status: 'satisfied',
           statusLabel: 'Satisfied',
-          statusDetail: `SOL at ${wallet.solPct.toFixed(0)}% — within ${maxPct}% cap.`,
+          statusDetail: `${asset.toUpperCase()} at ${currentPct.toFixed(0)}% — within ${maxPct}% cap.`,
         };
       }
+    }
+
+    // Generic evaluation for custom policies based on trigger type
+    if (policy.trigger === 'balance') {
+      const threshold = (policy.params.threshold ?? 0) as number;
+      if (wallet.solBalance > threshold) {
+        return {
+          policy,
+          status: 'action_needed',
+          statusLabel: 'Action Needed',
+          statusDetail: `SOL balance (${wallet.solBalance.toFixed(2)}) exceeds threshold of ${threshold}.`,
+          recommendedAction: policy.actionLabel,
+        };
+      }
+      return {
+        policy,
+        status: 'satisfied',
+        statusLabel: 'Satisfied',
+        statusDetail: `SOL balance (${wallet.solBalance.toFixed(2)}) is within threshold.`,
+      };
+    }
+
+    if (policy.trigger === 'drawdown') {
+      const pct = (policy.params.pct ?? 30) as number;
+      const peak = wallet.peakUsd ?? wallet.totalUsd;
+      const drawdown = peak > 0 ? ((peak - wallet.totalUsd) / peak) * 100 : 0;
+      if (drawdown >= pct) {
+        return {
+          policy,
+          status: 'triggered',
+          statusLabel: 'Triggered',
+          statusDetail: `Portfolio down ${drawdown.toFixed(0)}% from peak.`,
+          recommendedAction: policy.actionLabel,
+        };
+      }
+      return {
+        policy,
+        status: 'satisfied',
+        statusLabel: 'Satisfied',
+        statusDetail: `Portfolio at $${wallet.totalUsd.toFixed(0)}. Drawdown: ${drawdown.toFixed(0)}%.`,
+      };
     }
 
     return {

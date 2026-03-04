@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { ActionLogWidget } from './ActionLogWidget';
+import { PullToRefresh } from './PullToRefresh';
 import { clsx } from 'clsx';
 import {
   type WalletState,
@@ -28,6 +29,30 @@ import { getActionStats } from '@/lib/action-log';
 import { Shield, Bot } from 'lucide-react';
 
 const NETWORK = getNetwork();
+
+// Token price estimates (used for portfolio total when no live price feed)
+const TOKEN_USD_PRICES: Record<string, number> = {
+  USDC: 1,
+  USDT: 1,
+  jitoSOL: 145, // ~SOL price + staking yield
+  mSOL: 145,
+  JUP: 0.85,
+  BONK: 0.000025,
+  SKR: 0.001,
+  RAY: 2.5,
+  ORCA: 3.5,
+};
+
+function estimateTokenUsd(symbol: string, uiAmount: number): number {
+  const price = TOKEN_USD_PRICES[symbol];
+  if (price !== undefined) return uiAmount * price;
+  return 0; // Unknown tokens not counted
+}
+
+function computeTotalUsd(ws: WalletState): number {
+  const tokenValue = ws.tokens.reduce((sum, t) => sum + estimateTokenUsd(t.symbol, t.uiAmount), 0);
+  return ws.solBalanceUsd + tokenValue;
+}
 
 // Simple SVG sparkline chart for portfolio value
 function PortfolioSparkline({ totalUsd }: { totalUsd: number }) {
@@ -349,6 +374,7 @@ export function DashboardView() {
   }
 
   return (
+    <PullToRefresh onRefresh={fetchWalletState}>
     <div className="safe-top px-4 pt-6 pb-4">
       {/* Demo Mode Banner */}
       {isDemo && (
@@ -426,10 +452,7 @@ export function DashboardView() {
       <div className="glass rounded-3xl p-6 mb-4 bg-gradient-to-br from-violet-950/40 to-purple-950/20">
         <p className="text-gray-400 text-xs mb-1">Total Balance</p>
         <div className="text-4xl font-bold text-white mb-1">
-          {formatUsd(walletState.solBalanceUsd + walletState.tokens.reduce((sum, t) => {
-            if (t.symbol === 'USDC' || t.symbol === 'USDT') return sum + t.uiAmount;
-            return sum;
-          }, 0))}
+          {formatUsd(computeTotalUsd(walletState))}
         </div>
         <div className="flex items-center gap-1.5 text-gray-300">
           <span className="text-sm font-medium">{formatSol(walletState.solBalance)}</span>
@@ -452,10 +475,7 @@ export function DashboardView() {
       </div>
 
       {/* Portfolio Sparkline */}
-      <PortfolioSparkline totalUsd={walletState.solBalanceUsd + walletState.tokens.reduce((sum, t) => {
-        if (t.symbol === 'USDC' || t.symbol === 'USDT') return sum + t.uiAmount;
-        return sum;
-      }, 0)} />
+      <PortfolioSparkline totalUsd={computeTotalUsd(walletState)} />
 
       {/* Portfolio Health Score */}
       <div className="glass rounded-2xl p-4 mb-4">
@@ -666,5 +686,6 @@ export function DashboardView() {
         )}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
