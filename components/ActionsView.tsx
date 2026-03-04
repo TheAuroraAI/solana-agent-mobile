@@ -13,6 +13,7 @@ import { getWalletState, getNetwork, getSolscanCluster, getRpcUrl } from '@/lib/
 import { getJupiterSwapTx, resolveOutputMint, SOL_MINT } from '@/lib/jupiter';
 import { logAction, updateActionOutcome } from '@/lib/action-log';
 import { loadSettings } from '@/lib/settings';
+import { SlideToConfirm } from './SlideToConfirm';
 
 const NETWORK = getNetwork();
 
@@ -596,20 +597,17 @@ export function ActionsView() {
               </p>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setPreviewAction(null)}
-                className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm active:scale-95 transition-transform"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleApprove(previewAction.id)}
-                className="flex-1 py-3 rounded-xl bg-violet-600 text-white font-medium text-sm active:scale-95 transition-transform"
-              >
-                Confirm & Sign
-              </button>
-            </div>
+            <SlideToConfirm
+              onConfirm={() => handleApprove(previewAction.id)}
+              label="Slide to sign"
+              confirmedLabel="Signed!"
+            />
+            <button
+              onClick={() => setPreviewAction(null)}
+              className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-300 transition-colors text-center"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
