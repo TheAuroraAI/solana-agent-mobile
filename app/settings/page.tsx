@@ -1,11 +1,12 @@
 import { Suspense } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { SettingsView } from '@/components/SettingsView';
+import { GenericSkeleton } from '@/components/Skeleton';
 
 export default function SettingsPage() {
   return (
     <AppShell>
-      <Suspense>
+      <Suspense fallback={<GenericSkeleton />}>
         <SettingsView />
       </Suspense>
     </AppShell>

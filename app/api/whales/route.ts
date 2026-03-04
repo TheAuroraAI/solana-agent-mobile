@@ -1,5 +1,6 @@
 import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { NextRequest } from 'next/server';
+import { getSolPrice } from '@/lib/solana';
 
 export const runtime = 'nodejs';
 export const revalidate = 0;
@@ -114,7 +115,7 @@ function getDemoAlerts(): WhaleAlert[] {
   ];
 }
 
-async function fetchRealAlerts(): Promise<WhaleAlert[]> {
+async function fetchRealAlerts(solPrice: number): Promise<WhaleAlert[]> {
   const connection = new Connection('https://api.mainnet-beta.solana.com', {
     commitment: 'confirmed',
     disableRetryOnRateLimit: true,
@@ -172,7 +173,6 @@ async function fetchRealAlerts(): Promise<WhaleAlert[]> {
       const delta = Math.abs(post - pre) / LAMPORTS_PER_SOL;
 
       if (delta >= 50) {
-        const solPrice = 179; // approximate
         const amountUsd = delta * solPrice;
         alerts.push({
           signature: sigs[i],
@@ -237,8 +237,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const solPrice = await getSolPrice();
     const realAlerts = await Promise.race([
-      fetchRealAlerts(),
+      fetchRealAlerts(solPrice),
       new Promise<WhaleAlert[]>((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 6000)
       ),

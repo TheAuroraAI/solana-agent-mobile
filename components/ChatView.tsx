@@ -313,6 +313,9 @@ export function ChatView() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask Aurora anything..."
+            enterKeyHint="send"
+            autoCorrect="off"
+            autoComplete="off"
             className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/50 transition-colors"
           />
           <button

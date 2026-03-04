@@ -1,13 +1,14 @@
 import { Suspense } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { YieldBoard } from '@/components/YieldBoard';
+import { GenericSkeleton } from '@/components/Skeleton';
 
 export const metadata = { title: 'Yield — Aurora' };
 
 export default function YieldPage() {
   return (
     <AppShell>
-      <Suspense fallback={null}>
+      <Suspense fallback={<GenericSkeleton />}>
         <div className="safe-top px-4 pt-6 pb-4">
           <div className="mb-5">
             <h1 className="text-white text-xl font-bold">Yield Opportunities</h1>

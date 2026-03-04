@@ -4,6 +4,7 @@ import {
   PublicKey,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
+import { getSolPrice } from '@/lib/solana';
 
 const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 
@@ -146,12 +147,13 @@ export async function GET(request: Request) {
       .slice(0, 8);
 
     // Estimate percentages
-    const totalEstimate = solBalance * 140 + tokens.reduce((s, t) => {
+    const solPrice = await getSolPrice();
+    const totalEstimate = solBalance * solPrice + tokens.reduce((s, t) => {
       if (t.symbol === 'USDC' || t.symbol === 'USDT') return s + t.amount;
       return s + t.amount * 0.01; // rough estimate
     }, 0);
 
-    const solPct = totalEstimate > 0 ? Math.round((solBalance * 140 / totalEstimate) * 100) : 100;
+    const solPct = totalEstimate > 0 ? Math.round((solBalance * solPrice / totalEstimate) * 100) : 100;
 
     const result: CloneData = {
       address: wallet,
