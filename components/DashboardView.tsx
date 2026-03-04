@@ -330,6 +330,9 @@ export function DashboardView() {
   const [copied, setCopied] = useState(false);
   const [seekerInfo, setSeekerInfo] = useState<SeekerInfo>({ isSeeker: false, features: [] });
   const [showReceive, setShowReceive] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [sendTo, setSendTo] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
 
   const fetchWalletState = useCallback(async () => {
     if (!publicKey) return;
@@ -566,35 +569,91 @@ export function DashboardView() {
       <AutonomyScore />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        <button
+          onClick={() => setShowSend(true)}
+          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+        >
+          <div className="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
+            <ArrowUpRight className="text-orange-400 w-4 h-4" />
+          </div>
+          <span className="text-white text-xs font-medium">Send</span>
+        </button>
+        <button
+          onClick={() => setShowReceive(true)}
+          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+        >
+          <div className="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+            <ArrowDownLeft className="text-emerald-400 w-4 h-4" />
+          </div>
+          <span className="text-white text-xs font-medium">Receive</span>
+        </button>
         <a
           href={isDemo ? '/chat?demo=true' : '/chat'}
-          className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
         >
-          <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center">
-            <Sparkles className="text-violet-400 w-5 h-5" />
+          <div className="w-9 h-9 bg-violet-500/20 rounded-xl flex items-center justify-center">
+            <Sparkles className="text-violet-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Ask Agent</span>
+          <span className="text-white text-xs font-medium">Agent</span>
         </a>
         <a
-          href={isDemo ? '/actions?demo=true' : '/actions'}
-          className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+          href={isDemo ? '/yield?demo=true' : '/yield'}
+          className="glass rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
         >
-          <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-            <Zap className="text-emerald-400 w-5 h-5" />
+          <div className="w-9 h-9 bg-blue-500/20 rounded-xl flex items-center justify-center">
+            <TrendingUp className="text-blue-400 w-4 h-4" />
           </div>
-          <span className="text-white text-xs font-medium">Actions</span>
-        </a>
-        <a
-          href={isDemo ? '/policies?demo=true' : '/policies'}
-          className="glass rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
-        >
-          <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-            <Shield className="text-blue-400 w-5 h-5" />
-          </div>
-          <span className="text-white text-xs font-medium">Policies</span>
+          <span className="text-white text-xs font-medium">Yield</span>
         </a>
       </div>
+
+      {/* Send Modal */}
+      {showSend && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowSend(false)}>
+          <div className="w-full max-w-sm bg-gray-900 rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-700 rounded-full mx-auto mb-5" />
+            <h3 className="text-white text-lg font-bold mb-4">Send SOL</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-gray-500 text-xs mb-1.5 block">Recipient address</label>
+                <input
+                  type="text"
+                  value={sendTo}
+                  onChange={(e) => setSendTo(e.target.value)}
+                  placeholder="Enter Solana address..."
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-violet-500/50 placeholder-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-gray-500 text-xs mb-1.5 block">Amount (SOL)</label>
+                <input
+                  type="number"
+                  value={sendAmount}
+                  onChange={(e) => setSendAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="any"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-gray-600"
+                />
+                <p className="text-gray-600 text-xs mt-1">Balance: {walletState.solBalance.toFixed(4)} SOL</p>
+              </div>
+              <a
+                href={`phantom://ul/v1/transfer?token=SOL&amount=${parseFloat(sendAmount || '0') * 1e9}&to=${sendTo}&cluster=mainnet-beta`}
+                onClick={() => { if (!sendTo || !sendAmount) return; setShowSend(false); }}
+                className={clsx(
+                  'flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white text-sm font-medium transition-colors',
+                  sendTo && sendAmount ? 'bg-violet-600 hover:bg-violet-500' : 'bg-gray-700 cursor-not-allowed pointer-events-none'
+                )}
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                Send via Phantom
+              </a>
+              <p className="text-gray-700 text-[10px] text-center">Opens Phantom wallet to confirm transaction</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Token Holdings */}
       {walletState.tokens.length > 0 && (
