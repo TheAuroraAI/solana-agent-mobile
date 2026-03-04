@@ -18,44 +18,79 @@ export interface BriefingData {
   source: 'live' | 'fallback';
 }
 
+// Mint addresses for key Solana tokens
+const BRIEFING_MINTS: Record<string, string> = {
+  SOL: 'So11111111111111111111111111111111111111112',
+  JUP: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+  RAY: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
+};
+
+const MINT_TO_SYM = Object.fromEntries(Object.entries(BRIEFING_MINTS).map(([s, m]) => [m, s]));
+
+function briefingFetchTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } }).finally(
+    () => clearTimeout(t)
+  );
+}
+
 async function fetchMarketSnapshot() {
   try {
-    // Fetch Solana + top Solana tokens from CoinGecko
-    const url =
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana,jito-governance-token,jupiter-exchange-solana,bonk,dogwifcoin,pyth-network,raydium&per_page=7&sparkline=false&price_change_percentage=24h';
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      next: { revalidate: 900 },
-    });
-    if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
-    const coins = await res.json() as Array<{
-      symbol: string;
-      current_price: number;
-      price_change_percentage_24h: number;
-      total_volume: number;
-      market_cap: number;
-    }>;
+    const addresses = Object.values(BRIEFING_MINTS).join(',');
 
-    const sol = coins.find(c => c.symbol === 'sol');
-    const others = coins.filter(c => c.symbol !== 'sol');
+    // Fetch Jupiter prices + DexScreener (price change + volume) in parallel
+    const [jupRes, dexRes] = await Promise.all([
+      briefingFetchTimeout(`https://api.jup.ag/price/v2?ids=${addresses}`, 8000),
+      briefingFetchTimeout(`https://api.dexscreener.com/tokens/v1/solana/${addresses}`, 8000),
+    ]);
 
-    const sorted = [...others].sort(
-      (a, b) => (b.price_change_percentage_24h ?? 0) - (a.price_change_percentage_24h ?? 0)
-    );
+    // Build price map from Jupiter
+    const jupData: { data: Record<string, { price: string }> } = jupRes.ok ? await jupRes.json() : { data: {} };
+    const prices: Record<string, number> = {};
+    for (const [sym, mint] of Object.entries(BRIEFING_MINTS)) {
+      const p = jupData.data[mint]?.price;
+      if (p) prices[sym] = parseFloat(p);
+    }
+
+    // Build 24h change + volume map from DexScreener
+    const changes: Record<string, number> = {};
+    let solVolume24h = 3_000_000_000;
+    if (dexRes.ok) {
+      const pairs: Array<{
+        baseToken?: { address?: string };
+        priceChangeH24?: number;
+        volume?: { h24?: number };
+      }> = await dexRes.json();
+
+      for (const pair of pairs) {
+        const mint = pair.baseToken?.address;
+        const sym = mint ? MINT_TO_SYM[mint] : undefined;
+        if (sym && typeof pair.priceChangeH24 === 'number' && !(sym in changes)) {
+          changes[sym] = pair.priceChangeH24;
+          if (sym === 'SOL' && pair.volume?.h24) solVolume24h = pair.volume.h24;
+        }
+      }
+    }
+
+    const solPrice = prices.SOL ?? 155;
+    const solChange24h = changes.SOL ?? 0;
+
+    // Find top gainer/loser among non-SOL tokens
+    const altTokens = Object.keys(BRIEFING_MINTS).filter(s => s !== 'SOL');
+    const altWithChange = altTokens
+      .filter(sym => sym in changes)
+      .map(sym => ({ symbol: sym, change: changes[sym] }))
+      .sort((a, b) => b.change - a.change);
 
     return {
-      solPrice: sol?.current_price ?? 150,
-      solChange24h: sol?.price_change_percentage_24h ?? 0,
-      solVolume24h: sol?.total_volume ?? 0,
-      topGainer: sorted[0]
-        ? { symbol: sorted[0].symbol.toUpperCase(), change: sorted[0].price_change_percentage_24h }
-        : null,
-      topLoser: sorted[sorted.length - 1]
-        ? {
-            symbol: sorted[sorted.length - 1].symbol.toUpperCase(),
-            change: sorted[sorted.length - 1].price_change_percentage_24h,
-          }
-        : null,
+      solPrice,
+      solChange24h,
+      solVolume24h,
+      topGainer: altWithChange[0] ?? { symbol: 'JUP', change: 0 },
+      topLoser: altWithChange[altWithChange.length - 1] ?? { symbol: 'BONK', change: 0 },
     };
   } catch {
     return {

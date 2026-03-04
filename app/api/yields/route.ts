@@ -22,14 +22,18 @@ const FALLBACK_RATES: YieldRate[] = [
 let _yieldCache: { rates: YieldRate[]; ts: number } | null = null;
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
+// Safe fetch with timeout using AbortController (compatible with all Vercel runtimes)
+function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
+}
+
 async function fetchJitoApy(): Promise<number | null> {
   try {
-    const res = await fetch('https://kobe.mainnet.jito.network/api/v1/stake_pool_stats', {
-      signal: AbortSignal.timeout(5000),
-    });
+    const res = await fetchWithTimeout('https://kobe.mainnet.jito.network/api/v1/stake_pool_stats', 10000);
     if (!res.ok) return null;
     const data = await res.json();
-    // Jito returns apy as a decimal (e.g., 0.075 for 7.5%)
     if (data?.apy) return data.apy * 100;
     return null;
   } catch {
@@ -39,9 +43,7 @@ async function fetchJitoApy(): Promise<number | null> {
 
 async function fetchMarinadeApy(): Promise<number | null> {
   try {
-    const res = await fetch('https://api.marinade.finance/msol/apy/1y', {
-      signal: AbortSignal.timeout(5000),
-    });
+    const res = await fetchWithTimeout('https://api.marinade.finance/msol/apy/1y', 10000);
     if (!res.ok) return null;
     const data = await res.json();
     if (typeof data?.value === 'number') return data.value * 100;
@@ -53,17 +55,15 @@ async function fetchMarinadeApy(): Promise<number | null> {
 }
 
 // Kamino USDC lending rate via their public market API
-// Market: Main Market, USDC reserve
 const KAMINO_USDC_RESERVE = 'D6q6wuQSriffjP5J1bNR6DHK5SH7pLDuukMv6ByNGi4';
 async function fetchKaminoUsdcApy(): Promise<number | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://api.kamino.finance/reserve-market-stats?env=mainnet-beta&start=0&end=0&frequency=1h&pubkey=${KAMINO_USDC_RESERVE}`,
-      { signal: AbortSignal.timeout(5000) }
+      10000
     );
     if (!res.ok) return null;
     const data = await res.json();
-    // Try various response shapes
     const apy =
       data?.supplyInterestAPY ??
       data?.data?.[0]?.supplyInterestAPY ??
