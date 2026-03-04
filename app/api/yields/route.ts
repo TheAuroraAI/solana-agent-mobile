@@ -52,6 +52,29 @@ async function fetchMarinadeApy(): Promise<number | null> {
   }
 }
 
+// Kamino USDC lending rate via their public market API
+// Market: Main Market, USDC reserve
+const KAMINO_USDC_RESERVE = 'D6q6wuQSriffjP5J1bNR6DHK5SH7pLDuukMv6ByNGi4';
+async function fetchKaminoUsdcApy(): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `https://api.kamino.finance/reserve-market-stats?env=mainnet-beta&start=0&end=0&frequency=1h&pubkey=${KAMINO_USDC_RESERVE}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Try various response shapes
+    const apy =
+      data?.supplyInterestAPY ??
+      data?.data?.[0]?.supplyInterestAPY ??
+      data?.stats?.supplyInterestAPY;
+    if (typeof apy === 'number') return parseFloat((apy * 100).toFixed(1));
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   // Return cache if fresh
   if (_yieldCache && Date.now() - _yieldCache.ts < CACHE_TTL) {
@@ -63,9 +86,10 @@ export async function GET() {
   }
 
   // Fetch live rates in parallel
-  const [jitoApy, marinadeApy] = await Promise.all([
+  const [jitoApy, marinadeApy, kaminoUsdcApy] = await Promise.all([
     fetchJitoApy(),
     fetchMarinadeApy(),
+    fetchKaminoUsdcApy(),
   ]);
 
   const rates: YieldRate[] = FALLBACK_RATES.map(rate => {
@@ -76,6 +100,10 @@ export async function GET() {
     }
     if (rate.protocol === 'Marinade' && marinadeApy !== null) {
       updated.apy = parseFloat(marinadeApy.toFixed(1));
+      updated.source = 'live';
+    }
+    if (rate.protocol === 'Kamino' && kaminoUsdcApy !== null) {
+      updated.apy = kaminoUsdcApy;
       updated.source = 'live';
     }
     return updated;

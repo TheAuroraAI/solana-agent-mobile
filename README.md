@@ -116,24 +116,34 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 ```
 Browser (Mobile PWA)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
-├── Dashboard → Portfolio + AI Insight Card + Allocation Chart
+├── Dashboard → Portfolio + AI Briefing + 24h P&L + Allocation Chart + Insight Card
 ├── Agent Chat → Streaming AI (Claude Sonnet 4.6 or Groq) with DeFi + SKR knowledge
 ├── Actions → AI Proposals: Stake/Swap/Analysis/Alert (Haiku 4.5 or Groq)
 ├── Whales → Whale wallet tracker with clone functionality
+├── History → On-chain tx history with protocol ID, token deltas, analytics
+├── Trending → Solana ecosystem tokens ranked by volume, gainers, losers
+├── Search → 1000+ token search with live prices and CoinGecko data
 ├── Unlocks → Token unlock calendar (upcoming vesting events)
-├── Yield → DeFi yield board + SKR Guardian Staking (featured)
+├── Yield → DeFi yield board (live rates) + SKR Guardian Staking (featured)
+├── dApp Store → Solana Mobile dApp discovery
 └── Settings → Network, RPC, AI models (BYOK), DeFi protocols, API keys
 
-API Routes (Next.js Edge)
+API Routes (Next.js)
 ├── /api/agent → Streaming AI with portfolio + SKR staking context
 ├── /api/actions → DeFi action generation with protocol awareness
-├── /api/whales → Whale wallet monitoring
+├── /api/briefing → AI-generated market briefing (Groq, 1h cache)
+├── /api/prices → Live token prices + 24h change (CoinGecko, 60s cache)
+├── /api/yields → Live APY rates: Jito, Marinade, Kamino (30m cache)
+├── /api/whales → Whale wallet monitoring (Solana RPC)
+├── /api/history → On-chain tx parsing with protocol identification
+├── /api/trending → Solana ecosystem token rankings (CoinGecko)
+├── /api/search → Token search with live prices
 └── /api/unlocks → Token vesting schedule data
 ```
 
 ## Disclaimer
 
-Aurora's AI analysis uses estimated DeFi rates (APYs, protocol yields) that reflect typical market conditions but are **not real-time data**. SOL price is fetched live from Jupiter Price API (60s cache), but protocol APYs and strategy recommendations are based on the AI model's training data and may not reflect current market conditions. Always verify rates on the protocol's official website before executing any transaction.
+Aurora fetches live data from Jito, Marinade, Kamino, CoinGecko, and Solana RPC — but rates can change rapidly. The AI briefing is generated fresh every hour using live market data. Always verify rates on the protocol's official website before executing any transaction.
 
 *This is not financial advice.*
 
