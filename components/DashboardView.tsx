@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   RefreshCw, TrendingUp, ArrowUpRight, ArrowDownLeft, Copy, Check, ExternalLink,
   FlaskConical, Sparkles, AlertTriangle, Zap, ArrowRightLeft,
-  Calendar, ChevronRight,
+  Calendar, ChevronRight, ScanLine,
 } from 'lucide-react';
 import { PriceTicker } from './PriceTicker';
 import { ActionLogWidget } from './ActionLogWidget';
@@ -333,6 +333,62 @@ export function DashboardView() {
   const [showSend, setShowSend] = useState(false);
   const [sendTo, setSendTo] = useState('');
   const [sendAmount, setSendAmount] = useState('');
+  const [showQrScan, setShowQrScan] = useState(false);
+  const [qrScanError, setQrScanError] = useState<string | null>(null);
+
+  // Parse Solana Pay URL: solana:<address>?amount=X&label=Y
+  const parseSolanaPayUrl = useCallback((raw: string) => {
+    const trimmed = raw.trim();
+    // Handle both "solana:ADDRESS?..." and bare "ADDRESS"
+    const match = trimmed.match(/^(?:solana:)?([1-9A-HJ-NP-Za-km-z]{32,44})(?:\?(.*))?$/);
+    if (!match) return false;
+    const address = match[1];
+    const params = new URLSearchParams(match[2] ?? '');
+    const amount = params.get('amount');
+    setSendTo(address);
+    if (amount) setSendAmount(amount);
+    setShowQrScan(false);
+    setShowSend(true);
+    return true;
+  }, []);
+
+  const startQrScan = useCallback(async () => {
+    setQrScanError(null);
+    // Use file input to capture camera image, then BarcodeDetector
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // rear camera on mobile
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      let imgSrc = '';
+      try {
+        const img = new Image();
+        imgSrc = URL.createObjectURL(file);
+        img.src = imgSrc;
+        await new Promise((r) => { img.onload = r; });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const BD = (window as any).BarcodeDetector;
+        if (!BD) {
+          setQrScanError('QR scanning not supported on this browser. Enter address manually.');
+          return;
+        }
+        const detector = new BD({ formats: ['qr_code'] });
+        const results = await detector.detect(img);
+        if (!results.length) { setQrScanError('No QR code found in image.'); return; }
+        const raw = results[0].rawValue as string;
+        if (!parseSolanaPayUrl(raw)) {
+          setQrScanError(`Unrecognised QR format: ${raw.slice(0, 40)}`);
+        }
+      } catch {
+        setQrScanError('Could not read QR code. Try again.');
+      } finally {
+        if (imgSrc) URL.revokeObjectURL(imgSrc);
+      }
+    };
+    input.click();
+  }, [parseSolanaPayUrl]);
 
   const fetchWalletState = useCallback(async () => {
     if (!publicKey) return;
@@ -616,14 +672,27 @@ export function DashboardView() {
             <h3 className="text-white text-lg font-bold mb-4">Send SOL</h3>
             <div className="space-y-3">
               <div>
-                <label className="text-gray-500 text-xs mb-1.5 block">Recipient address</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-gray-500 text-xs">Recipient address</label>
+                  <button
+                    type="button"
+                    onClick={startQrScan}
+                    className="flex items-center gap-1 text-violet-400 text-xs hover:text-violet-300 transition-colors"
+                  >
+                    <ScanLine className="w-3.5 h-3.5" />
+                    Scan QR
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value)}
-                  placeholder="Enter Solana address..."
+                  placeholder="Enter Solana address or scan QR..."
                   className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-violet-500/50 placeholder-gray-600"
                 />
+                {qrScanError && (
+                  <p className="text-red-400 text-[10px] mt-1">{qrScanError}</p>
+                )}
               </div>
               <div>
                 <label className="text-gray-500 text-xs mb-1.5 block">Amount (SOL)</label>
