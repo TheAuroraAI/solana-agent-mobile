@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { TaxData, TaxEvent, TaxEventType } from '@/app/api/tax/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -269,6 +270,8 @@ export function TaxView() {
           <RefreshCw size={16} className={clsx('text-gray-400', loading && 'animate-spin')} />
         </button>
       </div>
+
+      <DemoBanner />
 
       <div className="px-4 pt-4 space-y-5">
         {/* Year selector */}

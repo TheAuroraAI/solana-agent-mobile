@@ -26,6 +26,7 @@ import type {
   OrderSide,
   OrderType,
 } from '@/app/api/limits/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 /* ─── helpers ─── */
 
@@ -820,6 +821,8 @@ export function LimitsView() {
             Last updated {new Date(data.lastUpdated).toLocaleTimeString()}
           </p>
         </div>
+
+        <DemoBanner />
 
         {/* stats bar */}
         <div className="px-4 pb-3 flex gap-2">

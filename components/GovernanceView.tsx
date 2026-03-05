@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { GovernanceData, Proposal } from '@/app/api/governance/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 type StatusFilter = 'all' | 'active' | 'passed' | 'rejected' | 'pending';
 
@@ -387,6 +388,8 @@ export function GovernanceView() {
           </button>
         </div>
       </div>
+
+      <DemoBanner />
 
       {/* Stats row */}
       <div className="flex gap-2">

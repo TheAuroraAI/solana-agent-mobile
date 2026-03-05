@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { CopyData, Trader, TraderTier, CopyStatus, CopyPosition } from '@/app/api/copy/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 /* ─── helpers ─── */
 
@@ -582,6 +583,8 @@ export function CopyView() {
             <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
           </button>
         </div>
+
+        <DemoBanner />
 
         {/* Stats bar */}
         {data && (

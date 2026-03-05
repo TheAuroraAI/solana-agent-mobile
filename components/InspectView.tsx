@@ -270,7 +270,12 @@ function PnlSummary({ data }: { data: InspectData }) {
   const isUp = data.pnl30d >= 0;
   return (
     <div className="bg-gray-900 rounded-2xl p-4">
-      <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-3">30-Day P&amp;L</p>
+      <div className="flex items-center gap-2 mb-3">
+        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">30-Day P&amp;L</p>
+        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/20">
+          AI Estimate
+        </span>
+      </div>
       <div className="flex items-center gap-3 mb-3">
         <div className={clsx(
           'flex-1 rounded-xl p-3 text-center',
@@ -354,7 +359,12 @@ function TokenRow({ token }: { token: WalletToken }) {
 function TokenHoldings({ tokens }: { tokens: WalletToken[] }) {
   return (
     <div className="bg-gray-900 rounded-2xl p-4">
-      <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Top Holdings</p>
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">Top Holdings</p>
+        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/20">
+          AI Estimate
+        </span>
+      </div>
       {tokens.slice(0, 6).map((t) => (
         <TokenRow key={t.symbol} token={t} />
       ))}
@@ -479,7 +489,12 @@ function ActivityChart({ history }: { history: WalletActivity[] }) {
 function DefiProtocols({ protocols }: { protocols: InspectData['defiInteractions'] }) {
   return (
     <div className="bg-gray-900 rounded-2xl p-4">
-      <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-3">DeFi Protocols</p>
+      <div className="flex items-center gap-2 mb-3">
+        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">DeFi Protocols</p>
+        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/20">
+          AI Estimate
+        </span>
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {protocols.map((p) => (
           <div
@@ -673,6 +688,14 @@ export function InspectView() {
         <p className="text-gray-400 text-xs mt-1">
           Deep-dive analytics on any Solana address
         </p>
+        {data && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${data.dataSource === 'live' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className="text-xs text-gray-400">
+              {data.dataSource === 'live' ? 'Live on-chain data' : 'Estimated data'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Search */}

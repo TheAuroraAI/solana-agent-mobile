@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, Bell, ExternalLink, Zap, TrendingUp, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import type { Airdrop, AirdropStatus, AirdropsData } from '@/app/api/airdrops/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -338,6 +339,8 @@ export function AirdropsView() {
             </button>
           </div>
         </div>
+
+        <DemoBanner />
 
         <div className="px-4 pt-4 space-y-4">
           {/* Summary cards */}

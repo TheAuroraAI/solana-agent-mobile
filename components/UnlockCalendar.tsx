@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Calendar, AlertTriangle, TrendingDown, Clock, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
+import { DemoBanner } from '@/components/DemoBanner';
 import { clsx } from 'clsx';
 
 interface TokenUnlock {
@@ -174,13 +175,7 @@ export function UnlockCalendar() {
 
   return (
     <div className="mb-4">
-      {/* Simulated data banner */}
-      <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-        <FlaskConical className="w-4 h-4 text-amber-400 flex-shrink-0" />
-        <p className="text-amber-300 text-xs">
-          Simulated data — production would use real-time feeds from token unlock APIs.
-        </p>
-      </div>
+      <DemoBanner />
 
       {/* Section header */}
       <div className="flex items-center justify-between mb-3">

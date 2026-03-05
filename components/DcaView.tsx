@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DcaPlan, DcaData, DcaOrder } from '@/app/api/dca/route';
+import { DemoBanner } from '@/components/DemoBanner';
 
 /* ─── helpers ─── */
 
@@ -568,6 +569,8 @@ export function DcaView() {
           </button>
         </div>
       </div>
+
+      <DemoBanner />
 
       {/* Summary card */}
       {data && (
