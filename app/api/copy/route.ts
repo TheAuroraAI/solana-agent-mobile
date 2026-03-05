@@ -226,23 +226,58 @@ function buildPositions(traders: Trader[]): CopyPosition[] {
   ];
 }
 
+async function fetchLivePrices(): Promise<Record<string, number>> {
+  const addrs = [
+    'So11111111111111111111111111111111111111112', // SOL
+    'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', // WIF
+    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // JUP
+  ].join(',');
+  const res = await fetch(
+    `https://api.dexscreener.com/latest/dex/tokens/${addrs}`,
+    { signal: AbortSignal.timeout(4000) },
+  );
+  if (!res.ok) return {};
+  const data = await res.json() as { pairs?: Array<{ baseToken?: { symbol?: string }; priceUsd?: string }> };
+  const prices: Record<string, number> = {};
+  for (const pair of data.pairs ?? []) {
+    const sym = pair.baseToken?.symbol;
+    if (sym && pair.priceUsd && !(sym in prices)) {
+      prices[sym] = parseFloat(pair.priceUsd);
+    }
+  }
+  return prices;
+}
+
 export async function GET() {
   try {
-    const traders = buildTraders();
+    const [traders, prices] = await Promise.all([
+      Promise.resolve(buildTraders()),
+      fetchLivePrices().catch(() => ({} as Record<string, number>)),
+    ]);
     const myTraders = buildMyTraders(traders);
-    const activeCopyPositions = buildPositions(traders);
+    const activeCopyPositions = buildPositions(traders).map(pos => ({
+      ...pos,
+      currentPrice: prices[pos.token] ?? pos.currentPrice,
+      pnl: prices[pos.token]
+        ? (prices[pos.token] - pos.entryPrice) * pos.size * (pos.side === 'long' ? 1 : -1)
+        : pos.pnl,
+      pnlPct: prices[pos.token]
+        ? ((prices[pos.token] - pos.entryPrice) / pos.entryPrice) * 100 * (pos.side === 'long' ? 1 : -1)
+        : pos.pnlPct,
+    }));
 
     const totalCopied = myTraders.reduce((s, m) => s + m.allocatedUsd, 0);
     const totalPnl = myTraders.reduce((s, m) => s + m.pnl, 0);
     const activeTraders = myTraders.filter(m => m.status === 'active').length;
     const winRate = 72;
 
-    const data: CopyData = {
+    const data: CopyData & { source: string } = {
       featuredTraders: traders,
       myTraders,
       activeCopyPositions,
       stats: { totalCopied, totalPnl, activeTraders, winRate },
       lastUpdated: new Date().toISOString(),
+      source: Object.keys(prices).length > 0 ? 'live-prices' : 'estimated',
     };
 
     return NextResponse.json(data);
