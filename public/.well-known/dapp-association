@@ -1,0 +1,9 @@
+{
+  "dapp_id": "com.auroraai.aurora-agent",
+  "name": "Aurora Agent",
+  "url": "https://solana-agent-mobile.vercel.app",
+  "solana": {
+    "networks": ["mainnet-beta"],
+    "wallet_adapters": ["Phantom", "Solflare"]
+  }
+}

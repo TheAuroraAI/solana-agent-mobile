@@ -1,0 +1,106 @@
+---
+# Solana Mobile dApp Store Publisher Configuration
+# https://github.com/solana-mobile/dapp-store-publish
+
+namespace: com.auroraai.aurora-agent
+
+publisher:
+  name: Aurora AI
+  website: https://solana-agent-mobile.vercel.app
+  contact:
+    email: smarchant2026@gmail.com
+
+app:
+  name: Aurora Agent
+  tagline: Autonomous AI wallet manager for Solana
+  description: |
+    Aurora Agent is an autonomous AI that manages your Solana wallet.
+    Connect your Phantom wallet and Aurora analyzes your portfolio,
+    proposes specific DeFi actions (staking, swaps, rebalancing),
+    and executes transactions with one-tap approval.
+
+    Built natively for the Seeker device with SKR Guardian Staking
+    integration — automatically detects SKR balances, surfaces the
+    20.2% Guardian Staking APY, and executes liquid staking via
+    Jito, Marinade, and BlazeStake with a single tap.
+
+    Features:
+    - Autonomous portfolio analysis on every session
+    - Specific DeFi action proposals with exact amounts and APYs
+    - One-tap Phantom transaction signing
+    - Real-time streaming AI analysis
+    - SKR Guardian Staking integration
+    - Whale wallet tracking and copy-trading signals
+    - Jupiter V6 swap execution
+    - Installable PWA — runs fullscreen, offline-capable
+
+  short_description: Autonomous AI agent for Solana wallet management, staking, and DeFi.
+
+  categories:
+    - finance
+    - defi
+    - productivity
+
+  keywords:
+    - solana
+    - ai agent
+    - wallet
+    - defi
+    - staking
+    - skr
+    - seeker
+    - jupiter
+    - jito
+
+  icon: https://solana-agent-mobile.vercel.app/icon-512.png
+
+  screenshots:
+    - url: https://solana-agent-mobile.vercel.app/og-image.png
+      label: Portfolio Dashboard
+    - url: https://solana-agent-mobile.vercel.app/og-image.png
+      label: AI Agent Chat
+
+  website: https://solana-agent-mobile.vercel.app
+
+  # For web/PWA listing (no APK required for this track)
+  pwa:
+    url: https://solana-agent-mobile.vercel.app
+    manifest_url: https://solana-agent-mobile.vercel.app/manifest.json
+
+  # Solana-specific metadata
+  solana:
+    networks:
+      - mainnet-beta
+    wallet_adapters:
+      - Phantom
+      - Solflare
+    protocols:
+      - Jupiter
+      - Jito
+      - Marinade
+      - Kamino
+    seeker_features:
+      - skr_balance_display
+      - guardian_staking_card
+      - mobile_wallet_adapter
+
+  # Support info
+  support:
+    url: https://solana-agent-mobile.vercel.app
+    email: smarchant2026@gmail.com
+
+  privacy_policy_url: https://solana-agent-mobile.vercel.app/privacy
+
+  # Content rating
+  content_rating: EVERYONE
+
+  # Release info
+  release:
+    date: "2026-03-05"
+    version: "1.0.0"
+    changelog: |
+      - Initial release for MONOLITH Hackathon 2026
+      - SKR Guardian Staking integration
+      - Jupiter V6 swap execution
+      - Autonomous portfolio analysis
+      - Seeker-optimized mobile UI

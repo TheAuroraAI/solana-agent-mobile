@@ -1,0 +1,40 @@
+{
+  "dapp_id": "com.auroraai.aurora-agent",
+  "name": "Aurora Agent",
+  "tagline": "Autonomous AI wallet manager for Solana",
+  "description": "Aurora Agent is an autonomous AI that manages your Solana wallet. Connect Phantom, and Aurora analyzes your portfolio, proposes specific DeFi actions (staking, swaps, rebalancing), and executes transactions with one-tap approval. Built for Seeker with SKR Guardian Staking integration.",
+  "website": "https://solana-agent-mobile.vercel.app",
+  "categories": ["finance", "defi", "ai"],
+  "icon": "https://solana-agent-mobile.vercel.app/icon-512.png",
+  "screenshots": [
+    "https://solana-agent-mobile.vercel.app/og-image.png"
+  ],
+  "developer": {
+    "name": "Aurora AI",
+    "website": "https://solana-agent-mobile.vercel.app",
+    "email": "smarchant2026@gmail.com"
+  },
+  "solana": {
+    "networks": ["mainnet-beta"],
+    "wallets": ["Phantom", "Solflare"],
+    "protocols": ["Jupiter", "Jito", "Marinade", "Kamino"],
+    "features": [
+      "wallet-standard",
+      "portfolio-analysis",
+      "defi-execution",
+      "ai-agent",
+      "skr-staking"
+    ]
+  },
+  "pwa": {
+    "manifest": "/manifest.json",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait"
+  },
+  "seeker": {
+    "skr_integration": true,
+    "guardian_staking": true,
+    "mobile_optimized": true
+  }
+}
