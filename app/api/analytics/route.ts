@@ -69,13 +69,19 @@ async function fetchSolPriceHistory(period: Period): Promise<PerformancePoint[]>
   const start = now - days * 86_400_000;
   const interval = periodToInterval(period);
 
-  // CoinCap API — free, no auth required
-  const url = `https://api.coincap.io/v2/assets/solana/history?interval=${interval}&start=${start}&end=${now}`;
+  // CoinGecko free API — market chart endpoint, no auth required
+  const cgDays = period === '7d' ? '7' : period === '30d' ? '30' : period === '90d' ? '90' : '365';
+  const cgInterval = period === '7d' ? 'hourly' : 'daily';
+  const url = `https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=${cgDays}&interval=${cgInterval}`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`CoinCap ${res.status}`);
+  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
 
-  const data = await res.json() as { data: { priceUsd: string; time: number }[] };
-  const raw = data.data ?? [];
+  const data = await res.json() as { prices: [number, number][] };
+  // Convert CoinGecko format to { priceUsd, time } structure
+  const rawPrices: { priceUsd: string; time: number }[] = (data.prices ?? []).map(
+    ([ms, price]: [number, number]) => ({ priceUsd: String(price), time: ms })
+  );
+  const raw = rawPrices;
 
   if (raw.length === 0) throw new Error('No price history returned');
 

@@ -40,17 +40,17 @@ export interface DefiRatesData {
 // ─── Protocol metadata ────────────────────────────────────────────────────────
 
 const PROTOCOL_META: Record<string, { id: string; name: string; logo: string; type: 'lending' | 'yield' | 'perps' }> = {
-  'marginfi':         { id: 'marginfi',    name: 'Marginfi',    logo: '🏦', type: 'lending' },
-  'kamino-lending':   { id: 'kamino',      name: 'Kamino',      logo: '🌀', type: 'yield'   },
-  'kamino-finance':   { id: 'kamino',      name: 'Kamino',      logo: '🌀', type: 'yield'   },
-  'solend':           { id: 'solend',      name: 'Solend',      logo: '💧', type: 'lending' },
-  'drift-protocol':   { id: 'drift',       name: 'Drift',       logo: '🌊', type: 'perps'   },
-  'save-finance':     { id: 'save',        name: 'Save',        logo: '💾', type: 'lending' },
-  'jet-protocol':     { id: 'jet',         name: 'Jet Protocol',logo: '✈️', type: 'lending' },
-  'francium':         { id: 'francium',    name: 'Francium',    logo: '🔬', type: 'yield'   },
+  'kamino-lend':           { id: 'kamino',    name: 'Kamino',    logo: '🌀', type: 'lending' },
+  'kamino-liquidity':      { id: 'kamino',    name: 'Kamino',    logo: '🌀', type: 'yield'   },
+  'jupiter-lend':          { id: 'jupiter',   name: 'Jupiter Lend', logo: '♃', type: 'lending' },
+  'marginfi':              { id: 'marginfi',  name: 'Marginfi',  logo: '🏦', type: 'lending' },
+  'marginfi-lst':          { id: 'marginfi',  name: 'Marginfi',  logo: '🏦', type: 'lending' },
+  'save':                  { id: 'save',      name: 'Save',      logo: '💾', type: 'lending' },
+  'drift-staked-sol':      { id: 'drift',     name: 'Drift',     logo: '🌊', type: 'yield'   },
+  'loopscale':             { id: 'loopscale', name: 'Loopscale', logo: '🔄', type: 'lending' },
 };
 
-const KNOWN_TOKENS = new Set(['SOL', 'USDC', 'USDT', 'JUP', 'ETH', 'BTC', 'MSOL', 'JITOSOL', 'WBTC', 'BONK']);
+const KNOWN_TOKENS = new Set(['SOL', 'USDC', 'USDT', 'JUP', 'ETH', 'BTC', 'WSOL', 'MSOL', 'JITOSOL', 'WBTC', 'BONK', 'DSOL', 'JLP', 'CBBTC']);
 
 function fmtTvl(usd: number): string {
   if (usd >= 1e9) return `$${(usd / 1e9).toFixed(2)}B`;
