@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -30,6 +30,10 @@ const moreNav = [
   { href: '/alerts', label: 'Alerts', icon: Bell, desc: 'Price alerts, whale moves & custom notifications' },
   { href: '/sentiment', label: 'Social Pulse', icon: Heart, desc: 'Social sentiment & Fear/Greed index' },
   { href: '/governance', label: 'Governance', icon: Vote, desc: 'DAO proposals & on-chain voting' },
+  { href: '/airdrops', label: 'Airdrops', icon: Gift, desc: 'Upcoming and claimable Solana airdrops' },
+  { href: '/analytics', label: 'Analytics', icon: BarChart2, desc: 'Portfolio P&L, win rate, and performance' },
+  { href: '/bridge', label: 'Bridge', icon: ArrowLeftRight, desc: 'Cross-chain asset bridging aggregator' },
+  { href: '/limits', label: 'Limit Orders', icon: ListOrdered, desc: 'Place and manage limit orders' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
