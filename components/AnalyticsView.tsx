@@ -490,7 +490,7 @@ export function AnalyticsView() {
     setPeriod(p);
   };
 
-  const isUp = data ? data.totalPnl >= 0 : true;
+  const isUp = data ? (data.totalPnl ?? 0) >= 0 : true;
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -530,35 +530,35 @@ export function AnalyticsView() {
           <div className="grid grid-cols-2 gap-3">
             <KpiCard
               label="Total P&L"
-              value={`${data.totalPnl >= 0 ? '+' : ''}${fmt$(data.totalPnl, true)}`}
-              sub={fmtPct(data.totalPnlPct)}
-              subColor={pnlColor(data.totalPnl)}
+              value={`${(data.totalPnl ?? 0) >= 0 ? '+' : ''}${fmt$(data.totalPnl ?? 0, true)}`}
+              sub={fmtPct(data.totalPnlPct ?? 0)}
+              subColor={pnlColor(data.totalPnl ?? 0)}
               icon={
-                data.totalPnl >= 0
+                (data.totalPnl ?? 0) >= 0
                   ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                   : <TrendingDown className="w-3.5 h-3.5 text-red-400" />
               }
-              iconBg={data.totalPnl >= 0 ? 'bg-emerald-500/15' : 'bg-red-500/15'}
+              iconBg={(data.totalPnl ?? 0) >= 0 ? 'bg-emerald-500/15' : 'bg-red-500/15'}
             />
             <KpiCard
               label="Win Rate"
-              value={`${data.winRate}%`}
-              sub={`${data.totalTrades} total trades`}
+              value={data.winRate != null ? `${data.winRate}%` : '--'}
+              sub={`${data.totalTrades ?? '--'} total trades`}
               icon={<Target className="w-3.5 h-3.5 text-violet-400" />}
               iconBg="bg-violet-500/15"
             />
             <KpiCard
               label="Total Trades"
-              value={data.totalTrades.toLocaleString()}
-              sub={`Avg ${fmt$(data.avgTradeSize, true)} / trade`}
+              value={data.totalTrades != null ? data.totalTrades.toLocaleString() : '--'}
+              sub={`Avg ${fmt$(data.avgTradeSize ?? 0, true)} / trade`}
               icon={<BarChart2 className="w-3.5 h-3.5 text-blue-400" />}
               iconBg="bg-blue-500/15"
             />
             <KpiCard
               label="Sharpe Ratio"
-              value={data.sharpeRatio.toFixed(2)}
-              sub={data.sharpeRatio >= 1 ? 'Good risk-adj. return' : 'Below benchmark'}
-              subColor={data.sharpeRatio >= 1 ? 'text-emerald-500' : 'text-amber-500'}
+              value={data.sharpeRatio != null ? (data.sharpeRatio).toFixed(2) : '--'}
+              sub={(data.sharpeRatio ?? 0) >= 1 ? 'Good risk-adj. return' : 'Below benchmark'}
+              subColor={(data.sharpeRatio ?? 0) >= 1 ? 'text-emerald-500' : 'text-amber-500'}
               icon={<Zap className="w-3.5 h-3.5 text-amber-400" />}
               iconBg="bg-amber-500/15"
             />
@@ -570,19 +570,19 @@ export function AnalyticsView() {
               <div>
                 <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">Portfolio Value</p>
                 <p className="text-white text-2xl font-bold font-mono mt-0.5">
-                  {fmt$(data.portfolioValue)}
+                  {fmt$(data.portfolioValue ?? 0)}
                 </p>
               </div>
               <div className={clsx(
                 'px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-sm font-semibold',
-                pnlBg(data.totalPnl),
-                pnlColor(data.totalPnl),
+                pnlBg(data.totalPnl ?? 0),
+                pnlColor(data.totalPnl ?? 0),
               )}>
                 {isUp
                   ? <ArrowUpRight className="w-4 h-4" />
                   : <ArrowDownRight className="w-4 h-4" />
                 }
-                {fmtPct(data.totalPnlPct)}
+                {fmtPct(data.totalPnlPct ?? 0)}
               </div>
             </div>
             <PerfChart points={data.performanceHistory} isUp={isUp} />
@@ -590,28 +590,30 @@ export function AnalyticsView() {
 
           {/* Realized vs Unrealized */}
           <PnlSplit
-            realized={data.realizedPnl}
-            unrealized={data.unrealizedPnl}
-            total={data.totalPnl}
+            realized={data.realizedPnl ?? 0}
+            unrealized={data.unrealizedPnl ?? 0}
+            total={data.totalPnl ?? 0}
           />
 
           {/* Best / Worst Trade */}
-          <div className="flex gap-3">
-            <TradeCard
-              label="Best Trade"
-              symbol={data.bestTrade.symbol}
-              pnl={data.bestTrade.pnl}
-              pct={data.bestTrade.pct}
-              variant="best"
-            />
-            <TradeCard
-              label="Worst Trade"
-              symbol={data.worstTrade.symbol}
-              pnl={data.worstTrade.pnl}
-              pct={data.worstTrade.pct}
-              variant="worst"
-            />
-          </div>
+          {data.bestTrade && data.worstTrade && (
+            <div className="flex gap-3">
+              <TradeCard
+                label="Best Trade"
+                symbol={data.bestTrade.symbol}
+                pnl={data.bestTrade.pnl}
+                pct={data.bestTrade.pct}
+                variant="best"
+              />
+              <TradeCard
+                label="Worst Trade"
+                symbol={data.worstTrade.symbol}
+                pnl={data.worstTrade.pnl}
+                pct={data.worstTrade.pct}
+                variant="worst"
+              />
+            </div>
+          )}
 
           {/* Max Drawdown + Avg Trade Size stat row */}
           <div className="grid grid-cols-2 gap-3">
@@ -621,7 +623,7 @@ export function AnalyticsView() {
                 <span className="text-gray-500 text-xs">Max Drawdown</span>
               </div>
               <p className="text-red-400 text-xl font-bold font-mono">
-                -{data.maxDrawdown.toFixed(1)}%
+                -{(data.maxDrawdown ?? 0).toFixed(1)}%
               </p>
               <p className="text-gray-600 text-[10px] mt-1">Peak-to-trough loss</p>
             </div>
@@ -631,7 +633,7 @@ export function AnalyticsView() {
                 <span className="text-gray-500 text-xs">Avg Trade Size</span>
               </div>
               <p className="text-white text-xl font-bold font-mono">
-                {fmt$(data.avgTradeSize, true)}
+                {fmt$(data.avgTradeSize ?? 0, true)}
               </p>
               <p className="text-gray-600 text-[10px] mt-1">Per executed trade</p>
             </div>

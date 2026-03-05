@@ -1,217 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
-export const revalidate = 60;
+export const revalidate = 300; // Cache 5 min
 
 // ─── Exported Types ──────────────────────────────────────────────────────────
 
 export type Period = '7d' | '30d' | '90d' | '1y';
 
 export interface PerformancePoint {
-  date: string; // e.g. "Mar 1"
-  value: number; // portfolio value in USD
-  pnl: number;   // that day's P&L in USD
+  date: string;
+  value: number;
+  pnl: number;
 }
 
 export interface TokenPerf {
   symbol: string;
-  logo: string;       // emoji
-  pnl: number;        // USD
+  logo: string;
+  pnl: number;
   pnlPct: number;
   trades: number;
-  winRate: number;    // 0-100
+  winRate: number;
   avgHoldDays: number;
 }
 
 export interface AnalyticsData {
   period: Period;
-  portfolioValue: number;
-  totalPnl: number;
-  totalPnlPct: number;
-  realizedPnl: number;
-  unrealizedPnl: number;
-  winRate: number;       // 0-100
-  totalTrades: number;
-  avgTradeSize: number;
-  bestTrade: { symbol: string; pnl: number; pct: number };
-  worstTrade: { symbol: string; pnl: number; pct: number };
-  sharpeRatio: number;
-  maxDrawdown: number;   // percentage
+  portfolioValue: number | null;
+  totalPnl: number | null;
+  totalPnlPct: number | null;
+  realizedPnl: number | null;
+  unrealizedPnl: number | null;
+  winRate: number | null;
+  totalTrades: number | null;
+  avgTradeSize: number | null;
+  bestTrade: { symbol: string; pnl: number; pct: number } | null;
+  worstTrade: { symbol: string; pnl: number; pct: number } | null;
+  sharpeRatio: number | null;
+  maxDrawdown: number | null;
   performanceHistory: PerformancePoint[];
   topTokens: TokenPerf[];
   lastUpdated: string;
+  source: 'live' | 'market_only' | 'empty';
+  requiresWallet: boolean;
 }
 
-// ─── Data Generation ─────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatDate(d: Date): string {
   return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
 }
 
-/**
- * Seeded pseudo-random — deterministic per period so the chart doesn't
- * jump on every refresh, while still looking realistic.
- */
-function seededRng(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return ((s >>> 0) / 0xffffffff);
-  };
+function periodToDays(p: Period): number {
+  return p === '7d' ? 7 : p === '30d' ? 30 : p === '90d' ? 90 : 365;
 }
 
-function buildHistory(days: number, seed: number): PerformancePoint[] {
-  const rng = seededRng(seed);
-  const points: PerformancePoint[] = [];
-  const now = new Date();
-
-  // Starting portfolio value ~$12,000
-  let value = 12_000 + rng() * 1_200;
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-
-    // Daily drift: slight upward bias (+0.15%) with ±2.5% volatility
-    const drift = 0.0015;
-    const vol = 0.025;
-    const dailyReturn = drift + (rng() - 0.5) * 2 * vol;
-
-    // Occasional bigger moves (simulates news-driven spikes)
-    const shock = rng() < 0.08 ? (rng() - 0.4) * 0.08 : 0;
-
-    const pnl = value * (dailyReturn + shock);
-    value = Math.max(8_000, value + pnl);
-
-    points.push({
-      date: formatDate(d),
-      value: Math.round(value),
-      pnl: Math.round(pnl),
-    });
-  }
-
-  return points;
+function periodToInterval(p: Period): string {
+  return p === '7d' ? 'h1' : p === '30d' || p === '90d' ? 'd1' : 'd1';
 }
 
-function buildTopTokens(): TokenPerf[] {
-  return [
-    {
-      symbol: 'SOL',
-      logo: '◎',
-      pnl: 1_842,
-      pnlPct: 18.4,
-      trades: 34,
-      winRate: 68,
-      avgHoldDays: 4.2,
-    },
-    {
-      symbol: 'JUP',
-      logo: '🪐',
-      pnl: 623,
-      pnlPct: 41.2,
-      trades: 18,
-      winRate: 72,
-      avgHoldDays: 2.8,
-    },
-    {
-      symbol: 'BONK',
-      logo: '🐶',
-      pnl: -314,
-      pnlPct: -22.7,
-      trades: 27,
-      winRate: 41,
-      avgHoldDays: 1.1,
-    },
-    {
-      symbol: 'WIF',
-      logo: '🎩',
-      pnl: 287,
-      pnlPct: 14.3,
-      trades: 15,
-      winRate: 60,
-      avgHoldDays: 3.5,
-    },
-    {
-      symbol: 'RAY',
-      logo: '⚡',
-      pnl: -98,
-      pnlPct: -8.1,
-      trades: 9,
-      winRate: 44,
-      avgHoldDays: 5.0,
-    },
-    {
-      symbol: 'PYTH',
-      logo: '🔮',
-      pnl: 412,
-      pnlPct: 27.6,
-      trades: 12,
-      winRate: 67,
-      avgHoldDays: 6.1,
-    },
-  ];
-}
+// ─── Real SOL price history ───────────────────────────────────────────────────
 
-function periodToDays(period: Period): number {
-  switch (period) {
-    case '7d':  return 7;
-    case '30d': return 30;
-    case '90d': return 90;
-    case '1y':  return 365;
-  }
-}
-
-function buildData(period: Period): AnalyticsData {
+async function fetchSolPriceHistory(period: Period): Promise<PerformancePoint[]> {
   const days = periodToDays(period);
+  const now = Date.now();
+  const start = now - days * 86_400_000;
+  const interval = periodToInterval(period);
 
-  // Different seed per period for consistent but distinct charts
-  const seedMap: Record<Period, number> = {
-    '7d': 42,
-    '30d': 137,
-    '90d': 299,
-    '1y': 512,
+  // CoinCap API — free, no auth required
+  const url = `https://api.coincap.io/v2/assets/solana/history?interval=${interval}&start=${start}&end=${now}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error(`CoinCap ${res.status}`);
+
+  const data = await res.json() as { data: { priceUsd: string; time: number }[] };
+  const raw = data.data ?? [];
+
+  if (raw.length === 0) throw new Error('No price history returned');
+
+  // Downsample to max 90 points for performance
+  const step = Math.max(1, Math.floor(raw.length / 90));
+  const sampled = raw.filter((_, i) => i % step === 0);
+
+  const firstPrice = parseFloat(sampled[0].priceUsd);
+
+  return sampled.map((point, i) => {
+    const price = parseFloat(point.priceUsd);
+    const prevPrice = i > 0 ? parseFloat(sampled[i - 1].priceUsd) : firstPrice;
+    return {
+      date: formatDate(new Date(point.time)),
+      value: Math.round(price * 100) / 100,
+      pnl: Math.round((price - prevPrice) * 100) / 100,
+    };
+  });
+}
+
+// ─── Real wallet analytics (basic — from Solana RPC) ─────────────────────────
+
+async function fetchWalletStats(wallet: string, period: Period): Promise<{
+  totalTrades: number;
+  firstTxDate: string | null;
+}> {
+  const rpc = 'https://api.mainnet-beta.solana.com';
+  const days = periodToDays(period);
+  const sinceTs = Math.floor((Date.now() - days * 86_400_000) / 1000);
+
+  const res = await fetch(rpc, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0', id: 1,
+      method: 'getSignaturesForAddress',
+      params: [wallet, { limit: 1000 }],
+    }),
+  });
+
+  if (!res.ok) return { totalTrades: 0, firstTxDate: null };
+  const data = await res.json() as {
+    result: { blockTime?: number; err: null | object }[];
   };
 
-  const history = buildHistory(days, seedMap[period]);
-  const topTokens = buildTopTokens();
+  const sigs = data.result ?? [];
+  const inPeriod = sigs.filter(
+    (s) => s.err === null && (s.blockTime ?? 0) >= sinceTs,
+  );
 
-  const firstValue = history[0].value;
-  const lastValue  = history[history.length - 1].value;
-  const totalPnl   = lastValue - firstValue;
-  const totalPnlPct = (totalPnl / firstValue) * 100;
+  const oldest = sigs[sigs.length - 1];
+  const firstTxDate = oldest?.blockTime
+    ? new Date(oldest.blockTime * 1000).toISOString()
+    : null;
 
-  // Realized/unrealized split: 60% realized, 40% unrealized
-  const realizedPnl   = Math.round(totalPnl * 0.62);
-  const unrealizedPnl = totalPnl - realizedPnl;
-
-  // Scale trade count and avg size by period length
-  const tradeFactor = Math.max(1, days / 30);
-  const totalTrades  = Math.round(115 * tradeFactor);
-  const avgTradeSize = Math.round(680 + (days * 2.3));
-
-  return {
-    period,
-    portfolioValue: lastValue,
-    totalPnl: Math.round(totalPnl),
-    totalPnlPct: Math.round(totalPnlPct * 10) / 10,
-    realizedPnl,
-    unrealizedPnl,
-    winRate: 58,
-    totalTrades,
-    avgTradeSize,
-    bestTrade:  { symbol: 'JUP',  pnl: 623,  pct: 41.2  },
-    worstTrade: { symbol: 'BONK', pnl: -314, pct: -22.7 },
-    sharpeRatio: 1.4,
-    maxDrawdown: 18.3,
-    performanceHistory: history,
-    topTokens,
-    lastUpdated: new Date().toISOString(),
-  };
+  return { totalTrades: inPeriod.length, firstTxDate };
 }
 
 // ─── GET Handler ─────────────────────────────────────────────────────────────
@@ -219,16 +139,71 @@ function buildData(period: Period): AnalyticsData {
 const VALID_PERIODS = new Set<Period>(['7d', '30d', '90d', '1y']);
 
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const raw = searchParams.get('period') ?? '30d';
-    const period: Period = VALID_PERIODS.has(raw as Period) ? (raw as Period) : '30d';
+  const { searchParams } = new URL(req.url);
+  const raw = searchParams.get('period') ?? '30d';
+  const period: Period = VALID_PERIODS.has(raw as Period) ? (raw as Period) : '30d';
+  const wallet = searchParams.get('wallet')?.trim();
 
-    const data = buildData(period);
-    return NextResponse.json(data);
+  try {
+    const [history, walletStats] = await Promise.all([
+      fetchSolPriceHistory(period),
+      wallet ? fetchWalletStats(wallet, period) : Promise.resolve({ totalTrades: 0, firstTxDate: null }),
+    ]);
+
+    const firstVal = history[0]?.value ?? 0;
+    const lastVal = history[history.length - 1]?.value ?? 0;
+    const solPricePnlPct = firstVal > 0 ? Math.round(((lastVal - firstVal) / firstVal) * 1000) / 10 : 0;
+    const solPricePnl = Math.round((lastVal - firstVal) * 100) / 100;
+
+    if (!wallet) {
+      // No wallet: show SOL market performance as context only
+      return NextResponse.json({
+        period,
+        portfolioValue: null,
+        totalPnl: null,
+        totalPnlPct: null,
+        realizedPnl: null,
+        unrealizedPnl: null,
+        winRate: null,
+        totalTrades: null,
+        avgTradeSize: null,
+        bestTrade: null,
+        worstTrade: null,
+        sharpeRatio: null,
+        maxDrawdown: null,
+        performanceHistory: history,  // SOL price history
+        topTokens: [],
+        lastUpdated: new Date().toISOString(),
+        source: 'market_only',
+        requiresWallet: true,
+      } satisfies AnalyticsData);
+    }
+
+    // With wallet: show real transaction count + SOL price performance
+    // Full PnL calculation requires a transaction indexer with historical prices
+    return NextResponse.json({
+      period,
+      portfolioValue: null,
+      totalPnl: solPricePnl,
+      totalPnlPct: solPricePnlPct,
+      realizedPnl: null,
+      unrealizedPnl: null,
+      winRate: null,
+      totalTrades: walletStats.totalTrades,
+      avgTradeSize: null,
+      bestTrade: null,
+      worstTrade: null,
+      sharpeRatio: null,
+      maxDrawdown: null,
+      performanceHistory: history,
+      topTokens: [],
+      lastUpdated: new Date().toISOString(),
+      source: 'live',
+      requiresWallet: false,
+    } satisfies AnalyticsData);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to build analytics data' },
+      { error: err instanceof Error ? err.message : 'Failed to load analytics' },
       { status: 500 },
     );
   }

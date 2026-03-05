@@ -438,6 +438,8 @@ export function DcaView() {
         totalValue,
         overallPnlPercent:
           totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0,
+        source: data.source,
+        lastUpdated: new Date().toISOString(),
       });
     },
     [data],

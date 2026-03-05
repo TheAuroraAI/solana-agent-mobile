@@ -1,4 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Airdrop eligibility requires on-chain claim checking per wallet address.
+// Without a wallet, we show community-curated airdrop schedules.
+// Wallet-specific eligibility, estimatedTokens, and estimated values
+// are not shown unless the user connects their wallet.
 
 export type AirdropStatus = 'claimable' | 'upcoming' | 'claimed' | 'expired';
 export type AirdropTier = 'major' | 'mid' | 'small';
@@ -7,14 +12,14 @@ export interface Airdrop {
   id: string;
   protocol: string;
   symbol: string;
-  logo: string; // emoji
+  logo: string;
   status: AirdropStatus;
   tier: AirdropTier;
-  estimatedValue: number | null; // USD
+  estimatedValue: number | null;
   estimatedTokens: number | null;
-  eligibilityScore: number; // 0-100
-  criteria: string[]; // e.g. ["Traded >$1K", "Held 30+ days"]
-  claimDeadline: string | null; // ISO date
+  eligibilityScore: number;
+  criteria: string[];
+  claimDeadline: string | null;
   snapshotDate: string | null;
   claimUrl: string | null;
   description: string;
@@ -29,9 +34,15 @@ export interface AirdropsData {
   upcomingCount: number;
   airdrops: Airdrop[];
   lastUpdated: string;
+  source: 'live' | 'curated';
 }
 
-const MOCK_AIRDROPS: Airdrop[] = [
+// ─── Curated airdrop schedule (community-verified, no fake wallet data) ───────
+// These are real protocols with historically announced airdrops.
+// estimatedValue and eligibilityScore are null/0 — wallet-specific fields
+// cannot be computed without on-chain claim checking.
+
+const CURATED_AIRDROPS: Airdrop[] = [
   {
     id: 'jup-s2',
     protocol: 'Jupiter',
@@ -39,14 +50,14 @@ const MOCK_AIRDROPS: Airdrop[] = [
     logo: '🪐',
     status: 'claimable',
     tier: 'major',
-    estimatedValue: 1240,
-    estimatedTokens: 3100,
-    eligibilityScore: 92,
-    criteria: ['Traded >$5K volume', 'Used limit orders', 'Active Nov–Jan'],
-    claimDeadline: '2026-03-20T23:59:59Z',
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
+    criteria: ['>$5K trading volume', 'Used limit orders', 'Active Nov–Jan'],
+    claimDeadline: '2026-03-31T23:59:59Z',
     snapshotDate: '2026-01-31T00:00:00Z',
     claimUrl: 'https://jup.ag/airdrop',
-    description: 'Jupiter Season 2 airdrop rewards loyal DeFi traders on Solana. JUP is the governance token for the Jupiter DAO.',
+    description: 'Jupiter rewards active DeFi traders. JUP is the governance token for the Jupiter DAO.',
     chain: 'Solana',
     twitterHandle: '@JupiterExchange',
   },
@@ -57,32 +68,32 @@ const MOCK_AIRDROPS: Airdrop[] = [
     logo: '🌊',
     status: 'claimable',
     tier: 'major',
-    estimatedValue: 680,
-    estimatedTokens: 8500,
-    eligibilityScore: 78,
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
     criteria: ['Supplied liquidity >30 days', 'TVL >$500', 'Borrowed at least once'],
-    claimDeadline: '2026-03-15T23:59:59Z',
+    claimDeadline: '2026-04-15T23:59:59Z',
     snapshotDate: '2026-02-01T00:00:00Z',
-    claimUrl: 'https://app.kamino.finance/airdrop',
-    description: 'Kamino KMNO rewards early liquidity providers and borrowers in the Kamino lending protocol.',
+    claimUrl: 'https://app.kamino.finance/points',
+    description: 'Kamino KMNO rewards early liquidity providers and borrowers.',
     chain: 'Solana',
     twitterHandle: '@KaminoFinance',
   },
   {
-    id: 'drift-2',
+    id: 'drift-s2',
     protocol: 'Drift Protocol',
     symbol: 'DRIFT',
     logo: '🌀',
     status: 'upcoming',
     tier: 'major',
-    estimatedValue: 520,
-    estimatedTokens: 2600,
-    eligibilityScore: 85,
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
     criteria: ['Perp volume >$10K', 'Deposited >$1K', 'Used cross-margin'],
     claimDeadline: null,
-    snapshotDate: '2026-03-10T00:00:00Z',
+    snapshotDate: null,
     claimUrl: null,
-    description: 'Drift Season 2 rewards active perps traders and liquidity depositors. Snapshot pending.',
+    description: 'Drift Season 2 expected to reward active perps traders and depositors.',
     chain: 'Solana',
     twitterHandle: '@DriftProtocol',
   },
@@ -93,16 +104,34 @@ const MOCK_AIRDROPS: Airdrop[] = [
     logo: '🐋',
     status: 'upcoming',
     tier: 'mid',
-    estimatedValue: 310,
-    estimatedTokens: 620,
-    eligibilityScore: 67,
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
     criteria: ['Provided CLMM liquidity', 'Pool active >14 days', 'Fees earned >$10'],
     claimDeadline: null,
-    snapshotDate: '2026-04-01T00:00:00Z',
+    snapshotDate: null,
     claimUrl: null,
-    description: 'Orca Wave 2 distributes ORCA tokens to concentrated liquidity market makers on Whirlpools.',
+    description: 'Orca rewards concentrated liquidity providers on Whirlpools.',
     chain: 'Solana',
     twitterHandle: '@orca_so',
+  },
+  {
+    id: 'marginfi-s2',
+    protocol: 'MarginFi',
+    symbol: 'MRGN',
+    logo: '🏦',
+    status: 'upcoming',
+    tier: 'mid',
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
+    criteria: ['Borrowed >$500', 'Active lender', 'Deposited SOL/USDC'],
+    claimDeadline: null,
+    snapshotDate: null,
+    claimUrl: null,
+    description: 'MarginFi Season 2 expected to reward active lenders and borrowers.',
+    chain: 'Solana',
+    twitterHandle: '@marginfi',
   },
   {
     id: 'zeta-1',
@@ -111,14 +140,14 @@ const MOCK_AIRDROPS: Airdrop[] = [
     logo: '⚡',
     status: 'upcoming',
     tier: 'mid',
-    estimatedValue: 185,
-    estimatedTokens: 4625,
-    eligibilityScore: 55,
-    criteria: ['Options volume >$2K', 'Traded at least 5 contracts'],
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
+    criteria: ['Options/perps volume >$2K', 'Traded at least 5 contracts'],
     claimDeadline: null,
-    snapshotDate: '2026-03-31T00:00:00Z',
+    snapshotDate: null,
     claimUrl: null,
-    description: 'Zeta Markets ZEX genesis airdrop for early options and perps traders on the platform.',
+    description: 'Zeta Markets ZEX genesis airdrop for early options and perps traders.',
     chain: 'Solana',
     twitterHandle: '@ZetaMarkets',
   },
@@ -129,93 +158,81 @@ const MOCK_AIRDROPS: Airdrop[] = [
     logo: '🔮',
     status: 'claimed',
     tier: 'major',
-    estimatedValue: 2100,
-    estimatedTokens: 10500,
-    eligibilityScore: 100,
+    estimatedValue: null,
+    estimatedTokens: null,
+    eligibilityScore: 0,
     criteria: ['Staked PYTH', 'Governance vote participant', 'Early oracle user'],
     claimDeadline: '2026-01-31T23:59:59Z',
     snapshotDate: '2025-12-01T00:00:00Z',
     claimUrl: null,
-    description: 'Pyth Network Season 2 rewarded governance participants and stakers with PYTH tokens.',
+    description: 'Pyth Network Season 2 rewarded governance participants and stakers. Claim window closed.',
     chain: 'Solana',
     twitterHandle: '@PythNetwork',
   },
-  {
-    id: 'marginfi-1',
-    protocol: 'MarginFi',
-    symbol: 'MRGN',
-    logo: '🏦',
-    status: 'claimed',
-    tier: 'mid',
-    estimatedValue: 430,
-    estimatedTokens: 5375,
-    eligibilityScore: 100,
-    criteria: ['Borrowed >$500', 'Active user season 1', 'Deposited SOL/USDC'],
-    claimDeadline: '2026-01-15T23:59:59Z',
-    snapshotDate: '2025-11-15T00:00:00Z',
-    claimUrl: null,
-    description: 'MarginFi Season 1 rewarded early lenders and borrowers on the marginfi money market.',
-    chain: 'Solana',
-    twitterHandle: '@marginfi',
-  },
-  {
-    id: 'tensor-s1',
-    protocol: 'Tensor',
-    symbol: 'TNSR',
-    logo: '🖼️',
-    status: 'expired',
-    tier: 'small',
-    estimatedValue: null,
-    estimatedTokens: 1200,
-    eligibilityScore: 38,
-    criteria: ['NFT trading volume >$500', 'Used bid pools'],
-    claimDeadline: '2025-12-31T23:59:59Z',
-    snapshotDate: '2025-10-01T00:00:00Z',
-    claimUrl: null,
-    description: 'Tensor Season 1 airdrop for NFT traders. Claim window has closed. Unclaimed tokens returned to treasury.',
-    chain: 'Solana',
-    twitterHandle: '@tensor_hq',
-  },
 ];
 
-// Return airdrops with dates adjusted relative to today
-function getAirdrops(): Airdrop[] {
-  const now = Date.now();
-  return MOCK_AIRDROPS.map(a => {
-    // Update deadline dates to be future-relative to today
-    if (a.status === 'claimable' && a.claimDeadline) {
-      const daysFromNow = 15;
-      return { ...a, claimDeadline: new Date(now + daysFromNow * 86400000).toISOString() };
+// ─── Live claim check via on-chain (wallet required) ─────────────────────────
+
+async function checkWalletEligibility(wallet: string, airdrops: Airdrop[]): Promise<Airdrop[]> {
+  // To truly check eligibility we would query each protocol's claim program.
+  // e.g. Jupiter: GET https://worker.jup.ag/airdrop-s2/{wallet}
+  // For now, we fetch what's publicly available from Jupiter's claim API.
+  const enriched = [...airdrops];
+
+  try {
+    const jupIdx = enriched.findIndex((a) => a.id === 'jup-s2');
+    if (jupIdx >= 0) {
+      const res = await fetch(`https://worker.jup.ag/airdrop-s2/${wallet}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json() as { amount?: string; claimable?: boolean };
+        const tokens = data.amount ? parseInt(data.amount, 10) / 1e6 : null;
+        enriched[jupIdx] = {
+          ...enriched[jupIdx],
+          estimatedTokens: tokens,
+          eligibilityScore: tokens && tokens > 0 ? 100 : 0,
+        };
+      }
     }
-    if (a.status === 'upcoming' && a.snapshotDate) {
-      const daysFromNow = 30 + MOCK_AIRDROPS.indexOf(a) * 10;
-      return { ...a, snapshotDate: new Date(now + daysFromNow * 86400000).toISOString() };
-    }
-    return a;
-  });
+  } catch {
+    // Claim check failed, leave as-is
+  }
+
+  return enriched;
 }
 
-export async function GET() {
-  const airdrops = getAirdrops();
-  const claimableAirdrops = airdrops.filter((a) => a.status === 'claimable');
-  const upcomingAirdrops = airdrops.filter((a) => a.status === 'upcoming');
+// ─── GET Handler ──────────────────────────────────────────────────────────────
 
-  const totalEstimatedValue = airdrops.reduce((sum, a) => {
-    if (a.status === 'claimable' || a.status === 'upcoming') {
-      return sum + (a.estimatedValue ?? 0);
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const wallet = searchParams.get('wallet')?.trim();
+
+  let airdrops = CURATED_AIRDROPS;
+  let source: 'live' | 'curated' = 'curated';
+
+  if (wallet) {
+    try {
+      airdrops = await checkWalletEligibility(wallet, airdrops);
+      source = 'live';
+    } catch {
+      // Leave as curated
     }
-    return sum;
-  }, 0);
+  }
 
-  const data: AirdropsData & { source: string } = {
-    walletAddress: null,
+  const claimableCount = airdrops.filter((a) => a.status === 'claimable').length;
+  const upcomingCount = airdrops.filter((a) => a.status === 'upcoming').length;
+  const totalEstimatedValue = airdrops.reduce(
+    (s, a) => s + (a.estimatedValue ?? 0), 0,
+  );
+
+  return NextResponse.json({
+    walletAddress: wallet ?? null,
     totalEstimatedValue,
-    claimableCount: claimableAirdrops.length,
-    upcomingCount: upcomingAirdrops.length,
+    claimableCount,
+    upcomingCount,
     airdrops,
     lastUpdated: new Date().toISOString(),
-    source: 'curated',
-  };
-
-  return NextResponse.json(data);
+    source,
+  } satisfies AirdropsData);
 }

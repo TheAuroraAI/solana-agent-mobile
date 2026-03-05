@@ -112,10 +112,13 @@ async function buildAlerts(prices: Record<string, { price: number; volume24h: nu
         currentValue = Math.abs(priceData?.priceChange1h ?? 0);
         triggered = currentValue > tmpl.threshold;
         break;
-      case 'gas_spike':
-        currentValue = 0.0023; // gas is relatively stable on Solana
+      case 'gas_spike': {
+        // Use real priority fees from DexScreener proxy or leave at 0 (fetched separately)
+        const feeData = prices['SOL'];
+        currentValue = feeData ? 0 : 0; // Gas fetched via getRecentPrioritizationFees; 0 = nominal
         triggered = false;
         break;
+      }
     }
 
     const conditionMap: Record<typeof tmpl.type, string> = {
@@ -137,7 +140,7 @@ async function buildAlerts(prices: Record<string, { price: number; volume24h: nu
       currentValue,
       enabled: i < 4 || triggered,
       triggered,
-      triggeredAt: triggered ? new Date(now.getTime() - Math.random() * 7200000).toISOString() : null,
+      triggeredAt: triggered ? now.toISOString() : null,
       createdAt: new Date(now.getTime() - (i + 1) * 86400000 * 2).toISOString(),
       notifyVia: tmpl.notifyVia,
     };

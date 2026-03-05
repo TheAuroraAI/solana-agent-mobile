@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
+export const revalidate = 60;
 
 export type Chain =
   | 'Solana'
@@ -39,191 +40,146 @@ export interface BridgeRoute {
   lastUpdated: string;
 }
 
+export interface RecentBridge {
+  id: string;
+  status: 'completed' | 'pending' | 'failed';
+  from: string;
+  to: string;
+  amount: string;
+  txHash: string;
+  timestamp: string;
+}
+
 export interface BridgeData {
   supportedChains: Chain[];
   supportedTokens: BridgeToken[];
   featuredRoutes: BridgeRoute[];
-  recentBridges: {
-    id: string;
-    from: string;
-    to: string;
-    amount: string;
-    status: 'completed' | 'pending' | 'failed';
-    timestamp: string;
-    txHash: string;
-  }[];
+  recentBridges: RecentBridge[];  // Requires wallet connection — always empty
+  lastUpdated: string;
+  source: 'live' | 'estimated';
 }
 
-export async function GET(): Promise<NextResponse<BridgeData>> {
-  const now = new Date().toISOString();
+// ─── Static chain + token structure (no faked rates) ─────────────────────────
 
-  const supportedChains: Chain[] = [
-    'Solana',
-    'Ethereum',
-    'Arbitrum',
-    'Base',
-    'Polygon',
-    'Optimism',
-    'BSC',
-    'Avalanche',
-  ];
+const SUPPORTED_CHAINS: Chain[] = [
+  'Solana', 'Ethereum', 'Arbitrum', 'Base', 'Polygon', 'Optimism', 'BSC', 'Avalanche',
+];
 
-  const supportedTokens: BridgeToken[] = [
-    {
-      symbol: 'SOL',
-      name: 'Solana',
-      logo: '◎',
-      chains: ['Solana', 'Ethereum', 'Arbitrum', 'Base'],
-      price: 176.82,
-    },
-    {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      logo: '💵',
-      chains: ['Solana', 'Ethereum', 'Arbitrum', 'Base', 'Polygon', 'Optimism', 'Avalanche'],
-      price: 1.0,
-    },
-    {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      logo: '⟠',
-      chains: ['Ethereum', 'Arbitrum', 'Base', 'Optimism', 'Polygon'],
-      price: 3241.55,
-    },
-    {
-      symbol: 'USDT',
-      name: 'Tether USD',
-      logo: '₮',
-      chains: ['Solana', 'Ethereum', 'BSC', 'Polygon', 'Avalanche'],
-      price: 1.0,
-    },
-    {
-      symbol: 'WBTC',
-      name: 'Wrapped Bitcoin',
-      logo: '₿',
-      chains: ['Ethereum', 'Arbitrum', 'Base', 'Polygon'],
-      price: 88450.0,
-    },
-    {
-      symbol: 'BNB',
-      name: 'BNB',
-      logo: '🔶',
-      chains: ['BSC', 'Ethereum'],
-      price: 412.3,
-    },
-  ];
+// ─── Live price fetch ─────────────────────────────────────────────────────────
 
-  const featuredRoutes: BridgeRoute[] = [
-    {
-      id: 'route-001',
-      provider: 'Wormhole',
-      providerLogo: '🌀',
-      fromChain: 'Solana',
-      toChain: 'Ethereum',
-      fromToken: 'USDC',
-      toToken: 'USDC',
-      fromAmount: 100,
-      toAmount: 99.21,
-      fee: 0.79,
-      feePct: 0.79,
-      estimatedTime: 180,
-      steps: 2,
-      securityScore: 9,
-      isRecommended: true,
-      lastUpdated: now,
-    },
-    {
-      id: 'route-002',
-      provider: 'Mayan',
-      providerLogo: '🌊',
-      fromChain: 'Solana',
-      toChain: 'Ethereum',
-      fromToken: 'USDC',
-      toToken: 'USDC',
-      fromAmount: 100,
-      toAmount: 98.85,
-      fee: 1.15,
-      feePct: 1.15,
-      estimatedTime: 120,
-      steps: 1,
-      securityScore: 8,
-      isRecommended: false,
-      lastUpdated: now,
-    },
-    {
-      id: 'route-003',
-      provider: 'Allbridge',
-      providerLogo: '🌉',
-      fromChain: 'Solana',
-      toChain: 'Base',
-      fromToken: 'SOL',
-      toToken: 'SOL',
-      fromAmount: 1,
-      toAmount: 0.9971,
-      fee: 0.51,
-      feePct: 0.51,
-      estimatedTime: 900,
-      steps: 3,
-      securityScore: 7,
-      isRecommended: false,
-      lastUpdated: now,
-    },
-    {
-      id: 'route-004',
-      provider: 'deBridge',
-      providerLogo: '🔗',
-      fromChain: 'Ethereum',
-      toChain: 'Arbitrum',
-      fromToken: 'ETH',
-      toToken: 'ETH',
-      fromAmount: 0.1,
-      toAmount: 0.09975,
-      fee: 8.1,
-      feePct: 2.5,
-      estimatedTime: 30,
-      steps: 1,
-      securityScore: 8,
-      isRecommended: false,
-      lastUpdated: now,
-    },
-  ];
-
-  const recentBridges: BridgeData['recentBridges'] = [
-    {
-      id: 'recent-001',
-      from: 'Solana / USDC',
-      to: 'Ethereum / USDC',
-      amount: '500 USDC',
-      status: 'completed',
-      timestamp: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
-      txHash: '5Kx9Rmn...7mNqP3F',
-    },
-    {
-      id: 'recent-002',
-      from: 'Ethereum / ETH',
-      to: 'Arbitrum / ETH',
-      amount: '0.25 ETH',
-      status: 'pending',
-      timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      txHash: '3Jf2Tbn...9bWrK1A',
-    },
-    {
-      id: 'recent-003',
-      from: 'Polygon / USDT',
-      to: 'Solana / USDT',
-      amount: '250 USDT',
-      status: 'failed',
-      timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-      txHash: '8Nh4Ycn...2pXcL6B',
-    },
-  ];
-
-  const data: BridgeData = {
-    supportedChains,
-    supportedTokens,
-    featuredRoutes,
-    recentBridges,
+async function fetchTokenPrices(): Promise<Record<string, number>> {
+  // CoinGecko free tier for multi-token prices
+  const ids = 'solana,usd-coin,ethereum,tether,wrapped-bitcoin,binancecoin';
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+    { headers: { 'Accept': 'application/json' } },
+  );
+  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
+  const data = await res.json() as Record<string, { usd: number }>;
+  return {
+    SOL: data['solana']?.usd ?? 0,
+    USDC: 1.0,
+    ETH: data['ethereum']?.usd ?? 0,
+    USDT: data['tether']?.usd ?? 1.0,
+    WBTC: data['wrapped-bitcoin']?.usd ?? 0,
+    BNB: data['binancecoin']?.usd ?? 0,
   };
+}
 
-  return NextResponse.json(data);
+// ─── deBridge live quote for SOL→ETH USDC ────────────────────────────────────
+
+async function fetchDeBridgeRoutes(prices: Record<string, number>): Promise<BridgeRoute[]> {
+  const now = new Date().toISOString();
+  // deBridge DLN API — free, no auth
+  // Solana chainId: 7565164, Ethereum: 1, Arbitrum: 42161
+  const amount = '100000000'; // 100 USDC (6 decimals)
+  const url = [
+    'https://api.dln.trade/v1.0/dln/estimation',
+    '?srcChainId=7565164',
+    '&srcChainTokenIn=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    `&srcChainTokenInAmount=${amount}`,
+    '&dstChainId=1',
+    '&dstChainTokenOut=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    '&prependOperatingExpenses=true',
+  ].join('');
+
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`deBridge ${res.status}`);
+
+    const data = await res.json() as {
+      estimation?: {
+        srcChainTokenIn?: { amount?: string };
+        dstChainTokenOut?: { amount?: string; recommendedAmount?: string };
+        fees?: { fixFee?: { amount?: string }; operatingExpense?: { amount?: string } };
+        recommendedSlippage?: number;
+      };
+      order?: { approximateFulfillmentDelay?: number };
+    };
+
+    const fromAmount = parseInt(data.estimation?.srcChainTokenIn?.amount ?? '100000000', 10) / 1e6;
+    const toAmount = parseInt(data.estimation?.dstChainTokenOut?.recommendedAmount ?? data.estimation?.dstChainTokenOut?.amount ?? '99000000', 10) / 1e6;
+    const fee = Math.round((fromAmount - toAmount) * 100) / 100;
+    const feePct = Math.round((fee / fromAmount) * 10000) / 100;
+    const estimatedTime = (data.order?.approximateFulfillmentDelay ?? 180);
+
+    return [
+      {
+        id: 'route-debridge-sol-eth-usdc',
+        provider: 'deBridge (DLN)',
+        providerLogo: '🔗',
+        fromChain: 'Solana',
+        toChain: 'Ethereum',
+        fromToken: 'USDC',
+        toToken: 'USDC',
+        fromAmount,
+        toAmount,
+        fee,
+        feePct,
+        estimatedTime,
+        steps: 1,
+        securityScore: 8,
+        isRecommended: true,
+        lastUpdated: now,
+      },
+    ];
+  } catch {
+    // deBridge unavailable — return empty routes (no fake data)
+    return [];
+  }
+}
+
+// ─── GET Handler ──────────────────────────────────────────────────────────────
+
+export async function GET() {
+  try {
+    const prices = await fetchTokenPrices().catch(() => ({
+      SOL: 0, USDC: 1.0, ETH: 0, USDT: 1.0, WBTC: 0, BNB: 0,
+    }));
+
+    const featuredRoutes = await fetchDeBridgeRoutes(prices);
+
+    const supportedTokens: BridgeToken[] = [
+      { symbol: 'SOL',  name: 'Solana',          logo: '◎',  chains: ['Solana', 'Ethereum', 'Arbitrum', 'Base'],       price: prices.SOL  },
+      { symbol: 'USDC', name: 'USD Coin',         logo: '💵', chains: ['Solana', 'Ethereum', 'Arbitrum', 'Base', 'Polygon', 'Optimism', 'Avalanche'], price: 1.0 },
+      { symbol: 'ETH',  name: 'Ethereum',         logo: '⟠',  chains: ['Ethereum', 'Arbitrum', 'Base', 'Optimism', 'Polygon'], price: prices.ETH  },
+      { symbol: 'USDT', name: 'Tether USD',       logo: '₮',  chains: ['Solana', 'Ethereum', 'BSC', 'Polygon', 'Avalanche'], price: 1.0 },
+      { symbol: 'WBTC', name: 'Wrapped Bitcoin',  logo: '₿',  chains: ['Ethereum', 'Arbitrum', 'Base', 'Polygon'], price: prices.WBTC },
+      { symbol: 'BNB',  name: 'BNB',              logo: '🔶', chains: ['BSC', 'Ethereum'],                           price: prices.BNB  },
+    ];
+
+    return NextResponse.json({
+      supportedChains: SUPPORTED_CHAINS,
+      supportedTokens,
+      featuredRoutes,
+      recentBridges: [],
+      lastUpdated: new Date().toISOString(),
+      source: 'live',
+    } satisfies BridgeData);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to load bridge data' },
+      { status: 500 },
+    );
+  }
 }

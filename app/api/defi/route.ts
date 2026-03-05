@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
-export const revalidate = 60;
+export const revalidate = 300; // Cache 5 min
 
 // ─── Exported Types ───────────────────────────────────────────────────────────
 
 export interface DefiToken {
   symbol: string;
-  supplyApy: number;   // e.g. 4.2
-  borrowApy: number;   // e.g. 8.5
-  utilization: number; // 0-100 percent
-  liquidity: string;   // "$12.4M"
+  supplyApy: number;
+  borrowApy: number;
+  utilization: number;
+  liquidity: string;
 }
 
 export interface DefiProtocol {
   id: string;
-  name: string;   // "Marginfi", "Kamino", etc.
-  logo: string;   // emoji
-  tvl: string;    // "$420M"
+  name: string;
+  logo: string;
+  tvl: string;
   type: 'lending' | 'yield' | 'perps';
   tokens: DefiToken[];
 }
@@ -34,93 +34,122 @@ export interface DefiRatesData {
   bestBorrow: BestRate;
   totalTvl: string;
   lastUpdated: string;
+  source: 'live' | 'estimated';
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Protocol metadata ────────────────────────────────────────────────────────
 
-const PROTOCOLS: DefiProtocol[] = [
-  {
-    id: 'marginfi',
-    name: 'Marginfi',
-    logo: '🏦',
-    tvl: '$628M',
-    type: 'lending',
-    tokens: [
-      { symbol: 'SOL',  supplyApy: 7.14, borrowApy: 9.82,  utilization: 72, liquidity: '$182M' },
-      { symbol: 'USDC', supplyApy: 5.91, borrowApy: 8.43,  utilization: 84, liquidity: '$95M'  },
-      { symbol: 'USDT', supplyApy: 5.62, borrowApy: 8.10,  utilization: 79, liquidity: '$61M'  },
-      { symbol: 'JUP',  supplyApy: 2.38, borrowApy: 11.70, utilization: 43, liquidity: '$12M'  },
-    ],
-  },
-  {
-    id: 'kamino',
-    name: 'Kamino',
-    logo: '🌀',
-    tvl: '$1.04B',
-    type: 'yield',
-    tokens: [
-      { symbol: 'SOL',  supplyApy: 8.30, borrowApy: 10.55, utilization: 68, liquidity: '$310M' },
-      { symbol: 'USDC', supplyApy: 6.72, borrowApy: 9.01,  utilization: 88, liquidity: '$178M' },
-      { symbol: 'USDT', supplyApy: 6.44, borrowApy: 8.80,  utilization: 82, liquidity: '$112M' },
-      { symbol: 'JUP',  supplyApy: 3.15, borrowApy: 12.40, utilization: 38, liquidity: '$22M'  },
-    ],
-  },
-  {
-    id: 'solend',
-    name: 'Solend',
-    logo: '💧',
-    tvl: '$420M',
-    type: 'lending',
-    tokens: [
-      { symbol: 'SOL',  supplyApy: 6.88, borrowApy: 9.31,  utilization: 65, liquidity: '$134M' },
-      { symbol: 'USDC', supplyApy: 5.40, borrowApy: 7.90,  utilization: 81, liquidity: '$84M'  },
-      { symbol: 'USDT', supplyApy: 5.10, borrowApy: 7.60,  utilization: 76, liquidity: '$52M'  },
-    ],
-  },
-  {
-    id: 'drift',
-    name: 'Drift',
-    logo: '🌊',
-    tvl: '$287M',
-    type: 'perps',
-    tokens: [
-      { symbol: 'SOL',  supplyApy: 4.20, borrowApy: 7.15,  utilization: 58, liquidity: '$92M'  },
-      { symbol: 'USDC', supplyApy: 4.85, borrowApy: 6.90,  utilization: 74, liquidity: '$63M'  },
-      { symbol: 'JUP',  supplyApy: 1.95, borrowApy: 9.80,  utilization: 31, liquidity: '$8.4M' },
-    ],
-  },
-  {
-    id: 'tulip',
-    name: 'Tulip',
-    logo: '🌷',
-    tvl: '$94M',
-    type: 'yield',
-    tokens: [
-      { symbol: 'SOL',  supplyApy: 5.60, borrowApy: 8.20,  utilization: 61, liquidity: '$28M'  },
-      { symbol: 'USDC', supplyApy: 4.95, borrowApy: 7.10,  utilization: 70, liquidity: '$19M'  },
-      { symbol: 'USDT', supplyApy: 4.70, borrowApy: 6.85,  utilization: 67, liquidity: '$14M'  },
-    ],
-  },
-];
+const PROTOCOL_META: Record<string, { id: string; name: string; logo: string; type: 'lending' | 'yield' | 'perps' }> = {
+  'marginfi':         { id: 'marginfi',    name: 'Marginfi',    logo: '🏦', type: 'lending' },
+  'kamino-lending':   { id: 'kamino',      name: 'Kamino',      logo: '🌀', type: 'yield'   },
+  'kamino-finance':   { id: 'kamino',      name: 'Kamino',      logo: '🌀', type: 'yield'   },
+  'solend':           { id: 'solend',      name: 'Solend',      logo: '💧', type: 'lending' },
+  'drift-protocol':   { id: 'drift',       name: 'Drift',       logo: '🌊', type: 'perps'   },
+  'save-finance':     { id: 'save',        name: 'Save',        logo: '💾', type: 'lending' },
+  'jet-protocol':     { id: 'jet',         name: 'Jet Protocol',logo: '✈️', type: 'lending' },
+  'francium':         { id: 'francium',    name: 'Francium',    logo: '🔬', type: 'yield'   },
+};
 
-function computeBestRates(protocols: DefiProtocol[]): {
-  bestSupply: BestRate;
-  bestBorrow: BestRate;
-} {
+const KNOWN_TOKENS = new Set(['SOL', 'USDC', 'USDT', 'JUP', 'ETH', 'BTC', 'MSOL', 'JITOSOL', 'WBTC', 'BONK']);
+
+function fmtTvl(usd: number): string {
+  if (usd >= 1e9) return `$${(usd / 1e9).toFixed(2)}B`;
+  if (usd >= 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
+  return `$${(usd / 1e3).toFixed(0)}K`;
+}
+
+// ─── Live Data Fetch ──────────────────────────────────────────────────────────
+
+async function fetchDefiLlamaPools(): Promise<DefiProtocol[]> {
+  const res = await fetch('https://yields.llama.fi/pools', {
+    headers: { 'Accept': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`DefiLlama pools API ${res.status}`);
+
+  const data = await res.json() as { data: Record<string, unknown>[] };
+
+  // Filter for Solana, known protocols, major tokens, meaningful TVL
+  const relevant = data.data.filter((p) => {
+    const project = p.project as string;
+    const chain = p.chain as string;
+    const symbol = ((p.symbol as string) ?? '').toUpperCase().split('-')[0];
+    const tvl = (p.tvlUsd as number) ?? 0;
+    return (
+      chain === 'Solana' &&
+      PROTOCOL_META[project] &&
+      KNOWN_TOKENS.has(symbol) &&
+      tvl > 500_000
+    );
+  });
+
+  // Group by protocol
+  const byProtocol = new Map<string, Record<string, unknown>[]>();
+  for (const pool of relevant) {
+    const project = pool.project as string;
+    if (!byProtocol.has(project)) byProtocol.set(project, []);
+    byProtocol.get(project)!.push(pool);
+  }
+
+  // Dedupe: use first protocol meta key found per id
+  const seenIds = new Set<string>();
+  const protocols: DefiProtocol[] = [];
+
+  for (const [project, pools] of byProtocol) {
+    const meta = PROTOCOL_META[project];
+    if (seenIds.has(meta.id)) continue;
+    seenIds.add(meta.id);
+
+    const totalTvl = pools.reduce((s, p) => s + ((p.tvlUsd as number) || 0), 0);
+
+    const tokens: DefiToken[] = pools
+      .sort((a, b) => ((b.tvlUsd as number) || 0) - ((a.tvlUsd as number) || 0))
+      .slice(0, 4)
+      .map((p) => {
+        const supplyApy = Math.round(
+          (((p.apyBase as number) || 0) + ((p.apyReward as number) || 0)) * 100,
+        ) / 100;
+        const borrowRaw = (p.apyBaseBorrow as number) || 0;
+        const borrowApy = Math.round(
+          (borrowRaw > 0 ? borrowRaw : supplyApy * 1.4) * 100,
+        ) / 100;
+        const utilization = Math.round(((p.utilization as number) || 0.65) * 100);
+        const symbol = ((p.symbol as string) || '').toUpperCase().split('-')[0];
+        return {
+          symbol,
+          supplyApy,
+          borrowApy,
+          utilization,
+          liquidity: fmtTvl((p.tvlUsd as number) || 0),
+        };
+      });
+
+    if (tokens.length === 0) continue;
+
+    protocols.push({
+      id: meta.id,
+      name: meta.name,
+      logo: meta.logo,
+      tvl: fmtTvl(totalTvl),
+      type: meta.type,
+      tokens,
+    });
+  }
+
+  return protocols;
+}
+
+function computeBestRates(protocols: DefiProtocol[]): { bestSupply: BestRate; bestBorrow: BestRate } {
   let bestSupply: BestRate = { symbol: '', apy: 0, protocol: '' };
   let bestBorrow: BestRate = { symbol: '', apy: Infinity, protocol: '' };
 
   for (const p of protocols) {
     for (const t of p.tokens) {
-      if (t.supplyApy > bestSupply.apy) {
-        bestSupply = { symbol: t.symbol, apy: t.supplyApy, protocol: p.name };
-      }
-      if (t.borrowApy < bestBorrow.apy) {
-        bestBorrow = { symbol: t.symbol, apy: t.borrowApy, protocol: p.name };
-      }
+      if (t.supplyApy > bestSupply.apy) bestSupply = { symbol: t.symbol, apy: t.supplyApy, protocol: p.name };
+      if (t.borrowApy > 0 && t.borrowApy < bestBorrow.apy) bestBorrow = { symbol: t.symbol, apy: t.borrowApy, protocol: p.name };
     }
   }
 
+  if (bestBorrow.apy === Infinity) bestBorrow = { symbol: 'USDC', apy: 0, protocol: '' };
   return { bestSupply, bestBorrow };
 }
 
@@ -128,17 +157,25 @@ function computeBestRates(protocols: DefiProtocol[]): {
 
 export async function GET() {
   try {
-    const { bestSupply, bestBorrow } = computeBestRates(PROTOCOLS);
+    const protocols = await fetchDefiLlamaPools();
 
-    const data: DefiRatesData = {
-      protocols: PROTOCOLS,
+    if (protocols.length === 0) throw new Error('No Solana pools returned');
+
+    const { bestSupply, bestBorrow } = computeBestRates(protocols);
+    const totalTvlRaw = protocols.reduce((s, p) => {
+      const n = parseFloat(p.tvl.replace(/[$BMK]/g, ''));
+      const mult = p.tvl.endsWith('B') ? 1e9 : p.tvl.endsWith('M') ? 1e6 : 1e3;
+      return s + n * mult;
+    }, 0);
+
+    return NextResponse.json({
+      protocols,
       bestSupply,
       bestBorrow,
-      totalTvl: '$2.47B',
+      totalTvl: fmtTvl(totalTvlRaw),
       lastUpdated: new Date().toISOString(),
-    };
-
-    return NextResponse.json(data);
+      source: 'live',
+    } satisfies DefiRatesData);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to load DeFi rates' },

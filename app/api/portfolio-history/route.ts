@@ -13,10 +13,10 @@ async function fetchSolPriceHistory(): Promise<Array<[number, number]>> {
   const end = Date.now();
   const start = end - 7 * 24 * 60 * 60 * 1000;
   const url = `https://api.coincap.io/v2/assets/solana/history?interval=d1&start=${start}&end=${end}`;
-  
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
-  
+
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
@@ -25,30 +25,38 @@ async function fetchSolPriceHistory(): Promise<Array<[number, number]>> {
     clearTimeout(timer);
     if (!res.ok) throw new Error(`CoinCap ${res.status}`);
     const data = await res.json() as { data: Array<{ time: number; priceUsd: string }> };
-    return data.data.map(d => [d.time, parseFloat(d.priceUsd)]);
+    return data.data.map((d) => [d.time, parseFloat(d.priceUsd)]);
   } catch (e) {
     clearTimeout(timer);
     throw e;
   }
 }
 
+// Fallback: fetch just current SOL price to build a flat line (no randomness)
+async function fetchCurrentSolPrice(): Promise<number> {
+  const res = await fetch(
+    'https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112',
+    { headers: { Accept: 'application/json' } },
+  );
+  if (!res.ok) throw new Error('DexScreener unavailable');
+  const pairs = await res.json() as Array<{ baseToken?: { symbol?: string }; priceUsd?: string }>;
+  const solPair = pairs.find((p) => p.baseToken?.symbol === 'SOL');
+  const price = solPair?.priceUsd ? parseFloat(solPair.priceUsd) : 0;
+  if (!price || price <= 0) throw new Error('No SOL price');
+  return price;
+}
+
 // GET /api/portfolio-history?wallet=ADDRESS&solBalance=X&tokenUsd=Y
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const demo = searchParams.get('demo') === 'true';
-  const solBalance = parseFloat(searchParams.get('solBalance') ?? '0');
+  const solBalanceStr = searchParams.get('solBalance');
   const tokenUsdStr = searchParams.get('tokenUsd') ?? '0';
+  const solBalance = solBalanceStr ? parseFloat(solBalanceStr) : NaN;
   const tokenUsd = parseFloat(tokenUsdStr);
 
-  // Build demo points
-  if (demo || isNaN(solBalance)) {
-    const now = Date.now();
-    const demoPoints: DataPoint[] = Array.from({ length: 8 }, (_, i) => {
-      const ts = now - (7 - i) * 86_400_000;
-      const solPrice = 180 + Math.sin(i * 0.9) * 15 + Math.random() * 8;
-      return { timestamp: ts / 1000, totalUsd: 3.2 * solPrice + 450, solPrice };
-    });
-    return NextResponse.json({ points: demoPoints, source: 'demo' });
+  if (!solBalanceStr || isNaN(solBalance) || solBalance < 0) {
+    // No wallet connected — return empty (no fake demo data)
+    return NextResponse.json({ points: [], source: 'empty', requiresWallet: true });
   }
 
   try {
@@ -58,28 +66,23 @@ export async function GET(req: NextRequest) {
       totalUsd: solBalance * price + tokenUsd,
       solPrice: price,
     }));
-
     return NextResponse.json({ points, source: 'live' });
   } catch {
-    // Fallback: fetch current SOL price from DexScreener to seed the estimate
-    let currentSolPrice = 91;
+    // Fallback: use current SOL price to build a flat line (no random variance)
     try {
-      const dexRes = await fetch('https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112');
-      if (dexRes.ok) {
-        const pairs = await dexRes.json() as Array<{ baseToken?: { symbol?: string }; priceUsd?: string }>;
-        const solPair = pairs.find((p) => p.baseToken?.symbol === 'SOL');
-        const p = solPair?.priceUsd ? parseFloat(solPair.priceUsd) : 0;
-        if (p > 0) currentSolPrice = p;
-      }
-    } catch { /* keep default */ }
-
-    const now = Date.now();
-    const points: DataPoint[] = Array.from({ length: 8 }, (_, i) => {
-      const ts = now - (7 - i) * 86_400_000;
-      const variance = 1 + (Math.random() - 0.5) * 0.12;
-      const solPrice = currentSolPrice * variance;
-      return { timestamp: ts / 1000, totalUsd: solBalance * solPrice + tokenUsd, solPrice };
-    });
-    return NextResponse.json({ points, source: 'estimated' });
+      const currentSolPrice = await fetchCurrentSolPrice();
+      const now = Date.now();
+      const points: DataPoint[] = Array.from({ length: 8 }, (_, i) => {
+        const ts = now - (7 - i) * 86_400_000;
+        return {
+          timestamp: ts / 1000,
+          totalUsd: solBalance * currentSolPrice + tokenUsd,
+          solPrice: currentSolPrice,
+        };
+      });
+      return NextResponse.json({ points, source: 'estimated' });
+    } catch {
+      return NextResponse.json({ points: [], source: 'error' }, { status: 503 });
+    }
   }
 }

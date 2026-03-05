@@ -114,18 +114,11 @@ export async function GET() {
     // Fall through to static
   }
 
-  // Static fallback (updated March 2026, SOL ~$91, JitoSOL ~$115)
+  // All live APIs failed — return empty prices (frontend should handle missing data gracefully)
   return NextResponse.json({
-    prices: {
-      SOL: { usd: 91, change24h: 0 },
-      JUP: { usd: 0.19, change24h: 0 },
-      BONK: { usd: 0.000006, change24h: 0 },
-      WIF: { usd: 0.8, change24h: 0 },
-      jitoSOL: { usd: 115, change24h: 0 },
-      JitoSOL: { usd: 115, change24h: 0 },
-      mSOL: { usd: 115, change24h: 0 },
-    },
-    source: 'fallback',
+    prices: {},
+    source: 'unavailable',
     ts: Date.now(),
+    error: 'Price data temporarily unavailable. Please refresh.',
   });
 }

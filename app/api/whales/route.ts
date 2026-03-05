@@ -28,92 +28,6 @@ function getWhaleTier(amountUsd: number): WhaleAlert['tier'] {
   return 'dolphin';
 }
 
-// Demo data fallback — realistic based on real Solana transaction patterns
-function getDemoAlerts(): WhaleAlert[] {
-  const now = Math.floor(Date.now() / 1000);
-  return [
-    {
-      signature: '5QyKjUBq6A3HdFkYpYRqL2mNQ3xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p2s',
-      type: 'buy',
-      token: 'SOL',
-      amount: 48200,
-      amountUsd: 8_626_000,
-      wallet: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-      blockTime: now - 95,
-      tier: 'mega',
-    },
-    {
-      signature: 'Abz3HdkFkYpYRqL2mNQ3xgDvEcTsTwMr4Y6PKhF2pWJXdNbvB1nS7p2s4qY8KjU',
-      type: 'sell',
-      token: 'JUP',
-      amount: 4_250_000,
-      amountUsd: 2_870_000,
-      wallet: '3w4KM8f2d97TXJSDpbDj5jBkheTqA83TZRuJosgAsU5',
-      blockTime: now - 310,
-      tier: 'mega',
-    },
-    {
-      signature: 'CxKjUBq6A3HdFkYpYRqL2mNQ3xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p3t',
-      type: 'buy',
-      token: 'BONK',
-      amount: 15_200_000_000,
-      amountUsd: 347_000,
-      wallet: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
-      blockTime: now - 542,
-      tier: 'whale',
-    },
-    {
-      signature: 'DqJ5GH9LwP2mNQ3xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p2s4qY8KjUBq6',
-      type: 'transfer',
-      token: 'SOL',
-      amount: 8750,
-      amountUsd: 1_566_250,
-      wallet: 'FrozenSpinach3xKXtg2CW87d97TXJSDpbD5jBkheTqA8',
-      blockTime: now - 780,
-      tier: 'mega',
-    },
-    {
-      signature: 'EvPkHLm8Q9xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p2s4qY8KjUBq6A3HdFk',
-      type: 'buy',
-      token: 'WIF',
-      amount: 2_890_000,
-      amountUsd: 892_000,
-      wallet: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1',
-      blockTime: now - 1100,
-      tier: 'whale',
-    },
-    {
-      signature: 'FwJmKNp9RqL2mNQ3xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p2s4qY8KjU7H',
-      type: 'sell',
-      token: 'PYTH',
-      amount: 9_800_000,
-      amountUsd: 215_000,
-      wallet: 'AARKkgqmpGJnkpXFsMgpZLCjRaLCNUDq87smVLNPBnrx',
-      blockTime: now - 1450,
-      tier: 'whale',
-    },
-    {
-      signature: 'Gz8LPqR4T2mNQ3xgDvEcTsTwMr4Y6PKhFqz8pWJXdNbvB1nS7p2s4qY8KjUBq6A',
-      type: 'buy',
-      token: 'JUP',
-      amount: 1_500_000,
-      amountUsd: 1_012_500,
-      wallet: '6HoqL5CdXtgY7KSumKP8FzBpnT2mNQ3xgDvEcTs4qY8',
-      blockTime: now - 1820,
-      tier: 'mega',
-    },
-    {
-      signature: 'Hk9MsRv5U3nQ4ygEvFdTuTxNs5Z7RLhGrb9rXKnCwOPq2tYb2oUu8rZ9LjVCr7B',
-      type: 'transfer',
-      token: 'USDC',
-      amount: 3_200_000,
-      amountUsd: 3_200_000,
-      wallet: '8pVNv6Ibhf3r7LkXcSMj2oHwAmqtTuEvRxP9JbGYdZ4',
-      blockTime: now - 2100,
-      tier: 'mega',
-    },
-  ];
-}
 
 async function fetchRealAlerts(solPrice: number): Promise<WhaleAlert[]> {
   const connection = new Connection('https://api.mainnet-beta.solana.com', {
@@ -229,29 +143,18 @@ async function fetchRealAlerts(solPrice: number): Promise<WhaleAlert[]> {
   return alerts.filter(a => a.amountUsd >= 50_000).slice(0, 5);
 }
 
-export async function GET(req: NextRequest) {
-  const demo = req.nextUrl.searchParams.get('demo') === 'true';
-
-  if (demo) {
-    return Response.json({ alerts: getDemoAlerts(), source: 'demo' });
-  }
-
+export async function GET(_req: NextRequest) {
   try {
     const solPrice = await getSolPrice();
     const realAlerts = await Promise.race([
       fetchRealAlerts(solPrice),
       new Promise<WhaleAlert[]>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 6000)
+        setTimeout(() => reject(new Error('timeout')), 6000),
       ),
     ]);
-
-    // Supplement real with demo data if not enough results
-    const allAlerts = realAlerts.length >= 3
-      ? realAlerts
-      : [...realAlerts, ...getDemoAlerts().slice(0, 5 - realAlerts.length)];
-
-    return Response.json({ alerts: allAlerts, source: realAlerts.length >= 3 ? 'live' : 'mixed' });
+    return Response.json({ alerts: realAlerts, source: 'live' });
   } catch {
-    return Response.json({ alerts: getDemoAlerts(), source: 'demo' });
+    // RPC unavailable — return empty (no fake data)
+    return Response.json({ alerts: [], source: 'unavailable' });
   }
 }

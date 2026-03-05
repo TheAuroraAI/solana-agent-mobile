@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-export const revalidate = 60;
+export const revalidate = 300; // Cache 5 min
 
 export type SortField = 'marketCap' | 'volume24h' | 'price' | 'change24h' | 'change7d' | 'txCount' | 'holders';
 export type SortDir = 'asc' | 'desc';
@@ -9,7 +9,7 @@ export interface ScreenerToken {
   id: string;
   symbol: string;
   name: string;
-  logo: string; // emoji
+  logo: string;
   price: number;
   marketCap: number;
   volume24h: number;
@@ -19,9 +19,9 @@ export interface ScreenerToken {
   txCount24h: number;
   holders: number;
   liquidity: number;
-  fdv: number; // fully diluted valuation
-  ath: number; // all-time high
-  athChangePercent: number; // % below ATH
+  fdv: number;
+  ath: number;
+  athChangePercent: number;
   launchDate: string;
   category: 'defi' | 'meme' | 'gaming' | 'ai' | 'infra' | 'nft';
   isVerified: boolean;
@@ -32,504 +32,122 @@ export interface ScreenerData {
   tokens: ScreenerToken[];
   totalCount: number;
   lastUpdated: string;
+  source: 'live' | 'estimated';
 }
 
-const ALL_TOKENS: ScreenerToken[] = [
-  {
-    id: 'jupiter',
-    symbol: 'JUP',
-    name: 'Jupiter',
-    logo: '🪐',
-    price: 0.847,
-    marketCap: 1_130_000_000,
-    volume24h: 312_000_000,
-    change24h: 4.82,
-    change7d: 12.4,
-    change30d: -18.3,
-    txCount24h: 487_200,
-    holders: 892_000,
-    liquidity: 98_000_000,
-    fdv: 8_470_000_000,
-    ath: 2.02,
-    athChangePercent: -58.1,
-    launchDate: '2024-01-31',
-    category: 'defi',
-    isVerified: true,
-    tags: ['aggregator', 'swap', 'dex'],
-  },
-  {
-    id: 'bonk',
-    symbol: 'BONK',
-    name: 'Bonk',
-    logo: '🐕',
-    price: 0.00001843,
-    marketCap: 1_420_000_000,
-    volume24h: 198_000_000,
-    change24h: 7.31,
-    change7d: 21.6,
-    change30d: -31.2,
-    txCount24h: 1_240_000,
-    holders: 1_380_000,
-    liquidity: 87_000_000,
-    fdv: 1_843_000_000,
-    ath: 0.00005788,
-    athChangePercent: -68.2,
-    launchDate: '2022-12-25',
-    category: 'meme',
-    isVerified: true,
-    tags: ['meme', 'community', 'dog'],
-  },
-  {
-    id: 'dogwifhat',
-    symbol: 'WIF',
-    name: 'dogwifhat',
-    logo: '🐶',
-    price: 1.12,
-    marketCap: 1_120_000_000,
-    volume24h: 267_000_000,
-    change24h: -3.47,
-    change7d: -8.9,
-    change30d: -52.1,
-    txCount24h: 892_000,
-    holders: 234_000,
-    liquidity: 71_000_000,
-    fdv: 1_120_000_000,
-    ath: 4.83,
-    athChangePercent: -76.8,
-    launchDate: '2023-11-20',
-    category: 'meme',
-    isVerified: true,
-    tags: ['meme', 'dog', 'hat'],
-  },
-  {
-    id: 'raydium',
-    symbol: 'RAY',
-    name: 'Raydium',
-    logo: '⚡',
-    price: 2.87,
-    marketCap: 798_000_000,
-    volume24h: 142_000_000,
-    change24h: 2.14,
-    change7d: 6.8,
-    change30d: -24.5,
-    txCount24h: 312_000,
-    holders: 187_000,
-    liquidity: 124_000_000,
-    fdv: 957_000_000,
-    ath: 16.93,
-    athChangePercent: -83.1,
-    launchDate: '2021-02-21',
-    category: 'defi',
-    isVerified: true,
-    tags: ['amm', 'dex', 'yield'],
-  },
-  {
-    id: 'orca',
-    symbol: 'ORCA',
-    name: 'Orca',
-    logo: '🐋',
-    price: 2.43,
-    marketCap: 287_000_000,
-    volume24h: 43_800_000,
-    change24h: 1.67,
-    change7d: 4.2,
-    change30d: -19.8,
-    txCount24h: 98_400,
-    holders: 143_000,
-    liquidity: 61_000_000,
-    fdv: 346_000_000,
-    ath: 22.38,
-    athChangePercent: -89.1,
-    launchDate: '2021-08-01',
-    category: 'defi',
-    isVerified: true,
-    tags: ['clmm', 'dex', 'concentrated'],
-  },
-  {
-    id: 'pyth-network',
-    symbol: 'PYTH',
-    name: 'Pyth Network',
-    logo: '🔮',
-    price: 0.1724,
-    marketCap: 876_000_000,
-    volume24h: 87_600_000,
-    change24h: -1.23,
-    change7d: -5.7,
-    change30d: -38.4,
-    txCount24h: 56_700,
-    holders: 312_000,
-    liquidity: 34_000_000,
-    fdv: 1_724_000_000,
-    ath: 1.15,
-    athChangePercent: -85.0,
-    launchDate: '2023-11-20',
-    category: 'infra',
-    isVerified: true,
-    tags: ['oracle', 'price-feed', 'data'],
-  },
-  {
-    id: 'drift',
-    symbol: 'DRIFT',
-    name: 'Drift Protocol',
-    logo: '🌊',
-    price: 0.4312,
-    marketCap: 234_000_000,
-    volume24h: 56_400_000,
-    change24h: 8.92,
-    change7d: 18.3,
-    change30d: -12.7,
-    txCount24h: 187_000,
-    holders: 98_400,
-    liquidity: 27_000_000,
-    fdv: 431_200_000,
-    ath: 3.12,
-    athChangePercent: -86.2,
-    launchDate: '2024-05-17',
-    category: 'defi',
-    isVerified: true,
-    tags: ['perp', 'leverage', 'futures'],
-  },
-  {
-    id: 'kamino',
-    symbol: 'KMNO',
-    name: 'Kamino Finance',
-    logo: '🏔️',
-    price: 0.0634,
-    marketCap: 142_000_000,
-    volume24h: 28_900_000,
-    change24h: 5.61,
-    change7d: 14.7,
-    change30d: -8.4,
-    txCount24h: 67_200,
-    holders: 87_600,
-    liquidity: 18_700_000,
-    fdv: 634_000_000,
-    ath: 0.3842,
-    athChangePercent: -83.5,
-    launchDate: '2024-04-08',
-    category: 'defi',
-    isVerified: true,
-    tags: ['lending', 'leverage', 'liquidity'],
-  },
-  {
-    id: 'jito',
-    symbol: 'JTO',
-    name: 'Jito',
-    logo: '🎯',
-    price: 1.98,
-    marketCap: 298_000_000,
-    volume24h: 67_400_000,
-    change24h: -0.84,
-    change7d: 2.3,
-    change30d: -29.6,
-    txCount24h: 134_000,
-    holders: 287_000,
-    liquidity: 43_000_000,
-    fdv: 1_980_000_000,
-    ath: 6.04,
-    athChangePercent: -67.2,
-    launchDate: '2023-12-07',
-    category: 'infra',
-    isVerified: true,
-    tags: ['mev', 'staking', 'liquid-staking'],
-  },
-  {
-    id: 'marinade',
-    symbol: 'MNDE',
-    name: 'Marinade Finance',
-    logo: '🌿',
-    price: 0.0487,
-    marketCap: 38_200_000,
-    volume24h: 4_870_000,
-    change24h: 3.21,
-    change7d: 8.9,
-    change30d: -15.3,
-    txCount24h: 14_300,
-    holders: 76_400,
-    liquidity: 8_900_000,
-    fdv: 97_400_000,
-    ath: 4.67,
-    athChangePercent: -98.9,
-    launchDate: '2021-08-13',
-    category: 'defi',
-    isVerified: true,
-    tags: ['liquid-staking', 'governance'],
-  },
-  {
-    id: 'wen',
-    symbol: 'WEN',
-    name: 'Wen',
-    logo: '📅',
-    price: 0.00003124,
-    marketCap: 93_700_000,
-    volume24h: 18_700_000,
-    change24h: 15.43,
-    change7d: 32.1,
-    change30d: -61.8,
-    txCount24h: 234_000,
-    holders: 432_000,
-    liquidity: 12_400_000,
-    fdv: 312_400_000,
-    ath: 0.0002847,
-    athChangePercent: -89.0,
-    launchDate: '2024-01-26',
-    category: 'meme',
-    isVerified: false,
-    tags: ['meme', 'community', 'airdrop'],
-  },
-  {
-    id: 'helium-mobile',
-    symbol: 'MOBILE',
-    name: 'Helium Mobile',
-    logo: '📡',
-    price: 0.00324,
-    marketCap: 187_000_000,
-    volume24h: 9_870_000,
-    change24h: 0.78,
-    change7d: -2.4,
-    change30d: -33.7,
-    txCount24h: 23_400,
-    holders: 234_000,
-    liquidity: 7_800_000,
-    fdv: 3_240_000_000,
-    ath: 0.01893,
-    athChangePercent: -82.9,
-    launchDate: '2023-04-18',
-    category: 'infra',
-    isVerified: true,
-    tags: ['depin', 'telecom', 'wireless'],
-  },
-  {
-    id: 'helium',
-    symbol: 'HNT',
-    name: 'Helium',
-    logo: '📶',
-    price: 3.47,
-    marketCap: 598_000_000,
-    volume24h: 31_400_000,
-    change24h: 1.12,
-    change7d: 3.8,
-    change30d: -21.4,
-    txCount24h: 43_200,
-    holders: 342_000,
-    liquidity: 22_000_000,
-    fdv: 762_000_000,
-    ath: 55.22,
-    athChangePercent: -93.7,
-    launchDate: '2019-07-29',
-    category: 'infra',
-    isVerified: true,
-    tags: ['depin', 'iot', 'wireless'],
-  },
-  {
-    id: 'render',
-    symbol: 'RENDER',
-    name: 'Render',
-    logo: '🎨',
-    price: 3.12,
-    marketCap: 1_340_000_000,
-    volume24h: 98_700_000,
-    change24h: 6.74,
-    change7d: 11.2,
-    change30d: -27.8,
-    txCount24h: 87_600,
-    holders: 287_000,
-    liquidity: 56_000_000,
-    fdv: 1_497_600_000,
-    ath: 13.60,
-    athChangePercent: -77.1,
-    launchDate: '2020-06-10',
-    category: 'ai',
-    isVerified: true,
-    tags: ['gpu', 'rendering', 'ai', 'depin'],
-  },
-  {
-    id: 'popcat',
-    symbol: 'POPCAT',
-    name: 'Popcat',
-    logo: '🐱',
-    price: 0.3421,
-    marketCap: 342_100_000,
-    volume24h: 87_400_000,
-    change24h: 12.87,
-    change7d: 28.4,
-    change30d: -43.2,
-    txCount24h: 567_000,
-    holders: 189_000,
-    liquidity: 34_000_000,
-    fdv: 342_100_000,
-    ath: 1.98,
-    athChangePercent: -82.7,
-    launchDate: '2024-06-14',
-    category: 'meme',
-    isVerified: false,
-    tags: ['meme', 'cat', 'viral'],
-  },
-  {
-    id: 'book-of-meme',
-    symbol: 'BOME',
-    name: 'BOOK OF MEME',
-    logo: '📖',
-    price: 0.00481,
-    marketCap: 326_000_000,
-    volume24h: 72_100_000,
-    change24h: -5.32,
-    change7d: -14.8,
-    change30d: -58.9,
-    txCount24h: 432_000,
-    holders: 267_000,
-    liquidity: 28_700_000,
-    fdv: 481_000_000,
-    ath: 0.02884,
-    athChangePercent: -83.3,
-    launchDate: '2024-03-14',
-    category: 'meme',
-    isVerified: false,
-    tags: ['meme', 'art', 'community'],
-  },
-  {
-    id: 'cat-in-a-dogs-world',
-    symbol: 'MEW',
-    name: 'cat in a dogs world',
-    logo: '😺',
-    price: 0.00387,
-    marketCap: 154_800_000,
-    volume24h: 43_200_000,
-    change24h: 9.23,
-    change7d: 22.7,
-    change30d: -38.1,
-    txCount24h: 312_000,
-    holders: 198_000,
-    liquidity: 19_800_000,
-    fdv: 387_000_000,
-    ath: 0.01987,
-    athChangePercent: -80.5,
-    launchDate: '2024-04-09',
-    category: 'meme',
-    isVerified: false,
-    tags: ['meme', 'cat', 'dog'],
-  },
-  {
-    id: 'mother-iggy',
-    symbol: 'MOTHER',
-    name: 'MOTHER IGGY',
-    logo: '🎤',
-    price: 0.02134,
-    marketCap: 67_400_000,
-    volume24h: 14_300_000,
-    change24h: -2.18,
-    change7d: -7.3,
-    change30d: -67.4,
-    txCount24h: 98_700,
-    holders: 87_400,
-    liquidity: 8_700_000,
-    fdv: 213_400_000,
-    ath: 0.1872,
-    athChangePercent: -88.6,
-    launchDate: '2024-06-17',
-    category: 'meme',
-    isVerified: false,
-    tags: ['meme', 'celebrity', 'music'],
-  },
-  {
-    id: 'samoyedcoin',
-    symbol: 'SAMO',
-    name: 'Samoyedcoin',
-    logo: '🐩',
-    price: 0.01243,
-    marketCap: 43_200_000,
-    volume24h: 3_870_000,
-    change24h: 4.12,
-    change7d: 9.8,
-    change30d: -22.6,
-    txCount24h: 34_500,
-    holders: 143_000,
-    liquidity: 4_300_000,
-    fdv: 43_200_000,
-    ath: 0.2844,
-    athChangePercent: -95.6,
-    launchDate: '2021-04-01',
-    category: 'meme',
-    isVerified: true,
-    tags: ['meme', 'dog', 'og'],
-  },
-  {
-    id: 'bonfida',
-    symbol: 'FIDA',
-    name: 'Bonfida',
-    logo: '🌐',
-    price: 0.1834,
-    marketCap: 34_800_000,
-    volume24h: 5_120_000,
-    change24h: 11.47,
-    change7d: 19.3,
-    change30d: -11.2,
-    txCount24h: 28_900,
-    holders: 67_800,
-    liquidity: 5_600_000,
-    fdv: 183_400_000,
-    ath: 23.51,
-    athChangePercent: -99.2,
-    launchDate: '2020-12-17',
-    category: 'infra',
-    isVerified: true,
-    tags: ['naming', 'sns', 'domains'],
-  },
-];
+// ─── Token metadata (logos + category — not available from CoinGecko) ─────────
 
-// ─── Live price fetching ───────────────────────────────────────────────────────
-
-const SCREENER_MINTS: Record<string, string> = {
-  JUP: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
-  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-  WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
-  RAY: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
-  ORCA: 'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE',
-  PYTH: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3',
-  JTO: 'jtojtomepa8bduhxRhALFzXqHTp5sXQFEQnSmk1tHBnP',
-  MNDE: 'MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey',
-  RENDER: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
-  HNT: 'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux',
-  DRIFT: 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7',
-  KMNO: 'KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS',
+const TOKEN_META: Record<string, {
+  logo: string;
+  category: ScreenerToken['category'];
+  tags: string[];
+  isVerified: boolean;
+  launchDate: string;
+}> = {
+  SOL:    { logo: '◎',  category: 'infra',  tags: ['layer1', 'smart-contracts'],           isVerified: true,  launchDate: '2020-03-16' },
+  JUP:    { logo: '🪐', category: 'defi',   tags: ['aggregator', 'swap', 'dex'],            isVerified: true,  launchDate: '2024-01-31' },
+  BONK:   { logo: '🐶', category: 'meme',   tags: ['meme', 'dog-coin'],                     isVerified: true,  launchDate: '2022-12-25' },
+  WIF:    { logo: '🎩', category: 'meme',   tags: ['meme', 'dog-coin'],                     isVerified: true,  launchDate: '2023-11-20' },
+  RAY:    { logo: '⚡', category: 'defi',   tags: ['dex', 'amm', 'liquidity'],              isVerified: true,  launchDate: '2021-02-21' },
+  PYTH:   { logo: '🔮', category: 'infra',  tags: ['oracle', 'price-feed'],                 isVerified: true,  launchDate: '2023-08-09' },
+  JTO:    { logo: '🔷', category: 'defi',   tags: ['liquid-staking', 'mev'],               isVerified: true,  launchDate: '2023-12-07' },
+  ORCA:   { logo: '🐋', category: 'defi',   tags: ['dex', 'amm', 'clmm'],                  isVerified: true,  launchDate: '2021-03-04' },
+  MSOL:   { logo: '🫙', category: 'defi',   tags: ['liquid-staking'],                       isVerified: true,  launchDate: '2021-10-12' },
+  MNDE:   { logo: '🔵', category: 'defi',   tags: ['governance', 'liquid-staking'],         isVerified: true,  launchDate: '2021-10-20' },
+  DRIFT:  { logo: '🌊', category: 'defi',   tags: ['perps', 'dex'],                         isVerified: true,  launchDate: '2023-11-10' },
+  KMNO:   { logo: '🌀', category: 'defi',   tags: ['lending', 'yield'],                     isVerified: true,  launchDate: '2024-01-10' },
+  RENDER: { logo: '🖥️', category: 'ai',    tags: ['gpu', 'rendering', 'decentralized'],    isVerified: true,  launchDate: '2020-07-23' },
+  HNT:    { logo: '📡', category: 'infra',  tags: ['iot', 'wireless', 'helium'],            isVerified: true,  launchDate: '2019-07-29' },
+  MOBILE: { logo: '📶', category: 'infra',  tags: ['wireless', 'helium'],                   isVerified: true,  launchDate: '2023-03-20' },
+  POPCAT: { logo: '🐱', category: 'meme',   tags: ['meme', 'cat-coin'],                     isVerified: false, launchDate: '2024-01-01' },
+  MEW:    { logo: '🐈', category: 'meme',   tags: ['meme', 'cat-coin'],                     isVerified: false, launchDate: '2024-03-01' },
+  BOME:   { logo: '📚', category: 'meme',   tags: ['meme'],                                 isVerified: false, launchDate: '2024-03-14' },
+  FLOKI:  { logo: '⚡', category: 'meme',   tags: ['meme', 'dog-coin'],                     isVerified: true,  launchDate: '2021-06-25' },
+  SAMO:   { logo: '🐕', category: 'meme',   tags: ['meme', 'dog-coin'],                     isVerified: false, launchDate: '2021-04-01' },
 };
 
-interface DexPair {
-  baseToken?: { address?: string };
-  priceUsd?: string;
-  priceChange?: { h24?: number };
+// ─── CoinGecko fetch ──────────────────────────────────────────────────────────
+
+interface CoinGeckoToken {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+  current_price: number;
+  market_cap: number;
+  total_volume: number;
+  price_change_percentage_24h: number;
+  price_change_percentage_7d_in_currency: number;
+  price_change_percentage_30d_in_currency: number;
+  fully_diluted_valuation: number | null;
+  ath: number;
+  ath_change_percentage: number;
+  market_cap_rank: number;
+  circulating_supply: number;
+  total_supply: number | null;
 }
 
-async function fetchScreenerPrices(): Promise<Record<string, { usd: number; change24h: number }>> {
-  try {
-    const mints = Object.values(SCREENER_MINTS).join(',');
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 7000);
-    const res = await fetch(
-      `https://api.dexscreener.com/tokens/v1/solana/${mints}`,
-      { signal: controller.signal, headers: { Accept: 'application/json' } }
-    );
-    if (!res.ok) return {};
-    const pairs = await res.json() as DexPair[];
-    const mintMap: Record<string, { usd: number; change24h: number }> = {};
-    for (const pair of pairs) {
-      const mint = pair.baseToken?.address;
-      if (mint && !mintMap[mint] && parseFloat(pair.priceUsd ?? '0') > 0) {
-        mintMap[mint] = {
-          usd: parseFloat(pair.priceUsd!),
-          change24h: pair.priceChange?.h24 ?? 0,
-        };
-      }
+async function fetchCoinGeckoTokens(): Promise<CoinGeckoToken[]> {
+  // Fetch top Solana ecosystem tokens + SOL by market cap
+  const [solanaEco, sol] = await Promise.allSettled([
+    fetch(
+      'https://api.coingecko.com/api/v3/coins/markets' +
+      '?vs_currency=usd&category=solana-ecosystem' +
+      '&order=market_cap_desc&per_page=20&page=1' +
+      '&sparkline=false&price_change_percentage=7d,30d',
+      { headers: { 'Accept': 'application/json' } },
+    ).then((r) => r.ok ? r.json() as Promise<CoinGeckoToken[]> : Promise.reject(r.status)),
+    fetch(
+      'https://api.coingecko.com/api/v3/coins/markets' +
+      '?vs_currency=usd&ids=solana' +
+      '&sparkline=false&price_change_percentage=7d,30d',
+      { headers: { 'Accept': 'application/json' } },
+    ).then((r) => r.ok ? r.json() as Promise<CoinGeckoToken[]> : Promise.reject(r.status)),
+  ]);
+
+  const eco = solanaEco.status === 'fulfilled' ? solanaEco.value : [];
+  const solArr = sol.status === 'fulfilled' ? sol.value : [];
+
+  // Merge SOL at the top, dedup
+  const seen = new Set<string>();
+  const merged: CoinGeckoToken[] = [];
+  for (const t of [...solArr, ...eco]) {
+    if (!seen.has(t.symbol.toUpperCase())) {
+      seen.add(t.symbol.toUpperCase());
+      merged.push(t);
     }
-    // Convert mint addresses back to symbols
-    const result: Record<string, { usd: number; change24h: number }> = {};
-    for (const [symbol, mint] of Object.entries(SCREENER_MINTS)) {
-      if (mintMap[mint]) result[symbol] = mintMap[mint];
-    }
-    return result;
-  } catch {
-    return {};
   }
+
+  if (merged.length === 0) throw new Error('CoinGecko returned no tokens');
+  return merged.slice(0, 20);
+}
+
+function mapToScreenerToken(cg: CoinGeckoToken): ScreenerToken {
+  const sym = cg.symbol.toUpperCase();
+  const meta = TOKEN_META[sym];
+
+  return {
+    id: cg.id,
+    symbol: sym,
+    name: cg.name,
+    logo: meta?.logo ?? '●',
+    price: cg.current_price ?? 0,
+    marketCap: cg.market_cap ?? 0,
+    volume24h: cg.total_volume ?? 0,
+    change24h: Math.round((cg.price_change_percentage_24h ?? 0) * 100) / 100,
+    change7d: Math.round((cg.price_change_percentage_7d_in_currency ?? 0) * 100) / 100,
+    change30d: Math.round((cg.price_change_percentage_30d_in_currency ?? 0) * 100) / 100,
+    txCount24h: 0,  // Not available from CoinGecko
+    holders: 0,     // Not available from CoinGecko
+    liquidity: 0,   // Not available from CoinGecko
+    fdv: cg.fully_diluted_valuation ?? cg.market_cap ?? 0,
+    ath: cg.ath ?? 0,
+    athChangePercent: Math.round((cg.ath_change_percentage ?? 0) * 100) / 100,
+    launchDate: meta?.launchDate ?? '2021-01-01',
+    category: meta?.category ?? 'defi',
+    isVerified: meta?.isVerified ?? false,
+    tags: meta?.tags ?? [],
+  };
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -547,24 +165,13 @@ function applyFilters(
   if (category && category !== 'all') {
     result = result.filter((t) => t.category === category);
   }
-
-  if (minMcap > 0) {
-    result = result.filter((t) => t.marketCap >= minMcap);
-  }
-  if (maxMcap > 0) {
-    result = result.filter((t) => t.marketCap <= maxMcap);
-  }
+  if (minMcap > 0) result = result.filter((t) => t.marketCap >= minMcap);
+  if (maxMcap > 0) result = result.filter((t) => t.marketCap <= maxMcap);
 
   const fieldMap: Record<SortField, keyof ScreenerToken> = {
-    marketCap: 'marketCap',
-    volume24h: 'volume24h',
-    price: 'price',
-    change24h: 'change24h',
-    change7d: 'change7d',
-    txCount: 'txCount24h',
-    holders: 'holders',
+    marketCap: 'marketCap', volume24h: 'volume24h', price: 'price',
+    change24h: 'change24h', change7d: 'change7d', txCount: 'txCount24h', holders: 'holders',
   };
-
   const key = fieldMap[sort];
   result.sort((a, b) => {
     const av = a[key] as number;
@@ -585,32 +192,21 @@ export async function GET(request: NextRequest) {
   const minMcap = Number(searchParams.get('minMcap') ?? '0');
   const maxMcap = Number(searchParams.get('maxMcap') ?? '0');
 
-  // Try to get live prices
-  const livePrices = await fetchScreenerPrices();
+  try {
+    const cgTokens = await fetchCoinGeckoTokens();
+    const tokens = cgTokens.map(mapToScreenerToken);
+    const filtered = applyFilters(tokens, category, minMcap, maxMcap, sort, dir);
 
-  // Merge live prices into token list
-  const tokens = ALL_TOKENS.map((t) => {
-    const live = livePrices[t.symbol];
-    if (live && live.usd > 0) {
-      const priceRatio = live.usd / t.price;
-      return {
-        ...t,
-        price: live.usd,
-        change24h: live.change24h,
-        marketCap: Math.round(t.marketCap * priceRatio),
-        fdv: Math.round(t.fdv * priceRatio),
-      };
-    }
-    return t;
-  });
-
-  const filtered = applyFilters(tokens, category, minMcap, maxMcap, sort, dir);
-
-  const data: ScreenerData = {
-    tokens: filtered,
-    totalCount: filtered.length,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  return NextResponse.json(data);
+    return NextResponse.json({
+      tokens: filtered,
+      totalCount: filtered.length,
+      lastUpdated: new Date().toISOString(),
+      source: 'live',
+    } satisfies ScreenerData);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to load screener data' },
+      { status: 500 },
+    );
+  }
 }

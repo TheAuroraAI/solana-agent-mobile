@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -32,129 +32,125 @@ export interface DcaData {
   totalInvested: number;
   totalValue: number;
   overallPnlPercent: number;
+  source: 'live' | 'empty';
+  lastUpdated: string;
 }
 
-function generateDemoPlans(): DcaPlan[] {
-  const now = Date.now();
-  const DAY = 86400000;
-
-  return [
-    {
-      id: 'dca-001',
-      tokenSymbol: 'USDC',
-      tokenName: 'USD Coin',
-      tokenIcon: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-      amountPerInterval: 0.5,
-      interval: 'daily',
-      targetAllocation: 30,
-      totalInvested: 14.5,
-      averagePrice: 172.40,
-      currentPrice: 176.82,
-      orders: [
-        { date: new Date(now - 1 * DAY).toISOString(), amount: 0.5, price: 175.20, txSignature: '5Kx9R...7mNqP' },
-        { date: new Date(now - 2 * DAY).toISOString(), amount: 0.5, price: 173.80, txSignature: '3Jf2T...9bWrK' },
-        { date: new Date(now - 3 * DAY).toISOString(), amount: 0.5, price: 171.50, txSignature: '8Nh4Y...2pXcL' },
-        { date: new Date(now - 4 * DAY).toISOString(), amount: 0.5, price: 174.60, txSignature: '2Bg7W...5kMaR' },
-        { date: new Date(now - 5 * DAY).toISOString(), amount: 0.5, price: 169.30, txSignature: '9Dv1Z...4jHnS' },
-        { date: new Date(now - 6 * DAY).toISOString(), amount: 0.5, price: 170.80, txSignature: '6Fm3Q...8cTpU' },
-        { date: new Date(now - 7 * DAY).toISOString(), amount: 0.5, price: 168.90, txSignature: '4Aw5E...1gVsX' },
-      ],
-      status: 'active',
-      startDate: new Date(now - 29 * DAY).toISOString(),
-      nextExecution: new Date(now + 8 * 3600000).toISOString(),
-      pnlPercent: 2.57,
-    },
-    {
-      id: 'dca-002',
-      tokenSymbol: 'JUP',
-      tokenName: 'Jupiter',
-      tokenIcon: 'https://static.jup.ag/jup/icon.png',
-      amountPerInterval: 1.0,
-      interval: 'weekly',
-      targetAllocation: 15,
-      totalInvested: 8.0,
-      averagePrice: 0.92,
-      currentPrice: 1.04,
-      orders: [
-        { date: new Date(now - 7 * DAY).toISOString(), amount: 1.0, price: 0.88, txSignature: '7Rl8F...3nYwD' },
-        { date: new Date(now - 14 * DAY).toISOString(), amount: 1.0, price: 0.91, txSignature: '1Hs6G...6bZqE' },
-        { date: new Date(now - 21 * DAY).toISOString(), amount: 1.0, price: 0.95, txSignature: '5Kt4H...9dArF' },
-        { date: new Date(now - 28 * DAY).toISOString(), amount: 1.0, price: 0.87, txSignature: '3Mu2J...2fCsG' },
-      ],
-      status: 'active',
-      startDate: new Date(now - 56 * DAY).toISOString(),
-      nextExecution: new Date(now + 2 * DAY).toISOString(),
-      pnlPercent: 13.04,
-    },
-    {
-      id: 'dca-003',
-      tokenSymbol: 'BONK',
-      tokenName: 'Bonk',
-      tokenIcon: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png',
-      amountPerInterval: 0.25,
-      interval: 'daily',
-      targetAllocation: 10,
-      totalInvested: 5.0,
-      averagePrice: 0.00001920,
-      currentPrice: 0.00001743,
-      orders: [
-        { date: new Date(now - 1 * DAY).toISOString(), amount: 0.25, price: 0.00001810, txSignature: '8Nv3K...5hEtH' },
-        { date: new Date(now - 2 * DAY).toISOString(), amount: 0.25, price: 0.00001890, txSignature: '2Pw7L...8jFuI' },
-        { date: new Date(now - 3 * DAY).toISOString(), amount: 0.25, price: 0.00001950, txSignature: '6Qx1M...1kGvJ' },
-        { date: new Date(now - 4 * DAY).toISOString(), amount: 0.25, price: 0.00002010, txSignature: '4Ry5N...4lHwK' },
-        { date: new Date(now - 5 * DAY).toISOString(), amount: 0.25, price: 0.00001940, txSignature: '9Sz9P...7mIxL' },
-      ],
-      status: 'active',
-      startDate: new Date(now - 20 * DAY).toISOString(),
-      nextExecution: new Date(now + 14 * 3600000).toISOString(),
-      pnlPercent: -9.22,
-    },
-    {
-      id: 'dca-004',
-      tokenSymbol: 'PYTH',
-      tokenName: 'Pyth Network',
-      tokenIcon: 'https://pyth.network/token.svg',
-      amountPerInterval: 2.0,
-      interval: 'monthly',
-      targetAllocation: 10,
-      totalInvested: 6.0,
-      averagePrice: 0.38,
-      currentPrice: 0.41,
-      orders: [
-        { date: new Date(now - 30 * DAY).toISOString(), amount: 2.0, price: 0.35, txSignature: '1Ta3Q...0nJyM' },
-        { date: new Date(now - 60 * DAY).toISOString(), amount: 2.0, price: 0.39, txSignature: '5Ub7R...3oKzN' },
-        { date: new Date(now - 90 * DAY).toISOString(), amount: 2.0, price: 0.40, txSignature: '3Vc1S...6pLaO' },
-      ],
-      status: 'paused',
-      startDate: new Date(now - 90 * DAY).toISOString(),
-      nextExecution: new Date(now + 5 * DAY).toISOString(),
-      pnlPercent: 7.89,
-    },
-  ];
+interface JupDcaAccount {
+  userKey: string;
+  inputMint: string;
+  outputMint: string;
+  idx: string;
+  nextCycleAt: string;
+  inDeposited: string;
+  inWithdrawn: string;
+  outWithdrawn: string;
+  inUsed: string;
+  inAmountPerCycle: string;
+  cycleFrequency: string;
+  createdAt: string;
+  updatedAt: string;
+  publicKey: string;
+  status: string;
+  inputTokenProgram: string;
+  outputTokenProgram: string;
+  bump: number;
+  minOutAmount: string | null;
+  maxOutAmount: string | null;
+  lastCycleUsed: string;
+  lastCycleOut: string;
 }
 
-export async function GET() {
+// ─── Known token metadata ────────────────────────────────────────────────────
+
+const TOKEN_META: Record<string, { symbol: string; name: string; icon: string }> = {
+  'So11111111111111111111111111111111111111112':  { symbol: 'SOL',  name: 'Solana',    icon: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png' },
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', name: 'USD Coin', icon: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png' },
+  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN':  { symbol: 'JUP',  name: 'Jupiter',  icon: 'https://static.jup.ag/jup/icon.png' },
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', name: 'Bonk',     icon: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I' },
+  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': { symbol: 'WIF',  name: 'dogwifhat', icon: 'https://bafkreibk3covs5ltyqxa272uodhculbois6yuzmbl4o3stmlpcclkp23a.ipfs.nftstorage.link' },
+};
+
+function tokenMeta(mint: string) {
+  return TOKEN_META[mint] ?? { symbol: mint.slice(0, 4) + '...', name: 'Unknown Token', icon: '' };
+}
+
+function cyclesToInterval(seconds: number): 'daily' | 'weekly' | 'monthly' {
+  if (seconds <= 86400) return 'daily';
+  if (seconds <= 604800) return 'weekly';
+  return 'monthly';
+}
+
+async function fetchJupiterDca(wallet: string): Promise<DcaPlan[]> {
+  const url = `https://dca.jup.ag/v2/user/${wallet}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error(`Jupiter DCA API ${res.status}`);
+
+  const data = await res.json() as { dcaAccounts?: JupDcaAccount[] };
+  const accounts = data.dcaAccounts ?? [];
+
+  return accounts
+    .filter((a) => a.status !== 'Closed')
+    .map((a) => {
+      const outputMeta = tokenMeta(a.outputMint);
+      const inputMeta = tokenMeta(a.inputMint);
+      const inAmountPerCycle = parseInt(a.inAmountPerCycle, 10) / 1e6; // USDC/SOL decimals
+      const cycleFreq = parseInt(a.cycleFrequency, 10);
+      const interval = cyclesToInterval(cycleFreq);
+      const totalInvested = parseInt(a.inUsed, 10) / 1e6;
+      const nextCycle = new Date(parseInt(a.nextCycleAt, 10) * 1000).toISOString();
+      const startDate = new Date(parseInt(a.createdAt, 10) * 1000).toISOString();
+      const isActive = a.status === 'Active';
+
+      return {
+        id: a.publicKey,
+        tokenSymbol: outputMeta.symbol,
+        tokenName: outputMeta.name,
+        tokenIcon: outputMeta.icon,
+        amountPerInterval: inAmountPerCycle,
+        interval,
+        targetAllocation: 0,
+        totalInvested,
+        averagePrice: 0,  // Would require historical price lookups
+        currentPrice: 0,  // Fetch separately if needed
+        orders: [],       // Individual orders require transaction history
+        status: isActive ? 'active' : 'completed',
+        startDate,
+        nextExecution: nextCycle,
+        pnlPercent: 0,
+      } satisfies DcaPlan;
+    });
+}
+
+// ─── GET Handler ──────────────────────────────────────────────────────────────
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const wallet = searchParams.get('wallet')?.trim();
+
+  if (!wallet) {
+    return NextResponse.json({
+      plans: [],
+      totalInvested: 0,
+      totalValue: 0,
+      overallPnlPercent: 0,
+      source: 'empty',
+      lastUpdated: new Date().toISOString(),
+    } satisfies DcaData);
+  }
+
   try {
-    const plans = generateDemoPlans();
-    const totalInvested = plans.reduce((sum, p) => sum + p.totalInvested, 0);
+    const plans = await fetchJupiterDca(wallet);
+    const totalInvested = plans.reduce((s, p) => s + p.totalInvested, 0);
 
-    // Calculate total current value based on invested amount and PnL
-    const totalValue = plans.reduce((sum, p) => {
-      return sum + p.totalInvested * (1 + p.pnlPercent / 100);
-    }, 0);
-
-    const overallPnlPercent = totalInvested > 0
-      ? ((totalValue - totalInvested) / totalInvested) * 100
-      : 0;
-
-    const data: DcaData = {
+    return NextResponse.json({
       plans,
       totalInvested,
-      totalValue,
-      overallPnlPercent,
-    };
-
-    return NextResponse.json(data);
+      totalValue: totalInvested,  // PnL requires historical prices
+      overallPnlPercent: 0,
+      source: 'live',
+      lastUpdated: new Date().toISOString(),
+    } satisfies DcaData);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to fetch DCA data' },
@@ -166,16 +162,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    const {
-      tokenSymbol,
-      tokenName,
-      tokenIcon,
-      amountPerInterval,
-      interval,
-      duration,
-      startDate,
-    } = body;
+    const { tokenSymbol, tokenName, tokenIcon, amountPerInterval, interval, startDate } = body;
 
     if (!tokenSymbol || !amountPerInterval || !interval) {
       return NextResponse.json(

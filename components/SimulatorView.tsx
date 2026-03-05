@@ -305,18 +305,18 @@ export function SimulatorView() {
     if (!data)
       return { projectedValue: 0, netDelta: 0, netDeltaPct: 0, tokenResults: [] };
 
+    const portfolioValue = data.currentPortfolioValue ?? 0;
     let projected = 0;
     const results = data.tokens.map((t) => {
-      const alloc = (data.currentPortfolioValue * t.currentAllocation) / 100;
+      const alloc = (portfolioValue * t.currentAllocation) / 100;
       const change = changes[t.symbol] ?? 0;
       const newValue = alloc * (1 + change / 100);
       projected += newValue;
       return { symbol: t.symbol, logo: t.logo, delta: newValue - alloc, pct: change };
     });
 
-    const delta = projected - data.currentPortfolioValue;
-    const deltaPct =
-      data.currentPortfolioValue > 0 ? (delta / data.currentPortfolioValue) * 100 : 0;
+    const delta = projected - portfolioValue;
+    const deltaPct = portfolioValue > 0 ? (delta / portfolioValue) * 100 : 0;
 
     return {
       projectedValue: projected,
@@ -409,7 +409,7 @@ export function SimulatorView() {
               Current Portfolio
             </p>
             <p className="text-lg font-semibold text-gray-300">
-              {fmt$(data.currentPortfolioValue)}
+              {fmt$(data.currentPortfolioValue ?? 0)}
             </p>
           </div>
           <div className="text-right">
@@ -563,7 +563,7 @@ export function SimulatorView() {
           <TokenCard
             key={token.symbol}
             token={token}
-            portfolioValue={data.currentPortfolioValue}
+            portfolioValue={data.currentPortfolioValue ?? 0}
             change={changes[token.symbol] ?? 0}
             onChangeUpdate={handleSliderChange}
           />

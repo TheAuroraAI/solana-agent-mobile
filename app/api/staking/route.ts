@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export interface StakingPosition {
   protocol: 'jito' | 'marinade' | 'native';
   label: string;
   asset: string;
-  staked: number;       // SOL value
-  tokenAmount: number;  // liquid token amount (jitoSOL / mSOL)
+  staked: number;
+  tokenAmount: number;
   apy: number;
-  rewards7d: number;    // SOL earned in last 7 days (estimated)
+  rewards7d: number;
   status: 'active' | 'deactivating' | 'inactive';
   color: string;
 }
@@ -20,10 +20,8 @@ export interface StakingData {
   marinadeApy: number;
   nativeApy: number;
   source: 'live' | 'fallback';
+  requiresWallet: boolean;
 }
-
-let _cache: { data: StakingData; ts: number } | null = null;
-const CACHE_TTL = 5 * 60 * 1000;
 
 function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const ctrl = new AbortController();
@@ -36,7 +34,6 @@ async function fetchJitoApy(): Promise<number | null> {
     const res = await fetchWithTimeout('https://kobe.mainnet.jito.network/api/v1/stake_pool_stats', 8000);
     if (!res.ok) return null;
     const data = await res.json();
-    // API returns apy as array of {data: number, date: string}
     if (Array.isArray(data?.apy) && data.apy.length > 0) {
       const latest = data.apy[data.apy.length - 1];
       if (typeof latest?.data === 'number') return latest.data * 100;
@@ -56,70 +53,163 @@ async function fetchMarinadeApy(): Promise<number | null> {
   } catch { return null; }
 }
 
-export async function GET() {
-  if (_cache && Date.now() - _cache.ts < CACHE_TTL) {
-    return NextResponse.json(_cache.data);
+// ─── Fetch real staking positions from wallet ─────────────────────────────────
+
+const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
+const MSOL_MINT = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
+
+async function fetchWalletPositions(wallet: string, jitoApy: number, marinadeApy: number, nativeApy: number): Promise<StakingPosition[]> {
+  const rpc = 'https://api.mainnet-beta.solana.com';
+
+  // Fetch token accounts (jitoSOL, mSOL) and stake accounts
+  const [tokenRes, stakeRes] = await Promise.all([
+    fetch(rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'getTokenAccountsByOwner',
+        params: [wallet, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }],
+      }),
+    }),
+    fetch(rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 2,
+        method: 'getProgramAccounts',
+        params: ['Stake11111111111111111111111111111111111111112', {
+          filters: [{ memcmp: { offset: 44, bytes: wallet } }],
+          encoding: 'jsonParsed',
+        }],
+      }),
+    }),
+  ]);
+
+  const positions: StakingPosition[] = [];
+
+  // Parse jitoSOL / mSOL
+  if (tokenRes.ok) {
+    const tokenData = await tokenRes.json() as {
+      result: { value: { account: { data: { parsed: { info: { mint: string; tokenAmount: { uiAmount: number } } } } } }[] };
+    };
+
+    for (const acc of tokenData.result?.value ?? []) {
+      const info = acc.account?.data?.parsed?.info;
+      if (!info) continue;
+
+      if (info.mint === JITOSOL_MINT && info.tokenAmount.uiAmount > 0) {
+        const jitoSOL = info.tokenAmount.uiAmount;
+        positions.push({
+          protocol: 'jito',
+          label: 'Jito Liquid Staking',
+          asset: 'jitoSOL',
+          staked: jitoSOL * 1.04, // approximate exchange rate
+          tokenAmount: jitoSOL,
+          apy: jitoApy,
+          rewards7d: (jitoSOL * jitoApy / 100) / 52,
+          status: 'active',
+          color: '#38bdf8',
+        });
+      }
+
+      if (info.mint === MSOL_MINT && info.tokenAmount.uiAmount > 0) {
+        const mSOL = info.tokenAmount.uiAmount;
+        positions.push({
+          protocol: 'marinade',
+          label: 'Marinade Finance',
+          asset: 'mSOL',
+          staked: mSOL * 1.07, // approximate exchange rate
+          tokenAmount: mSOL,
+          apy: marinadeApy,
+          rewards7d: (mSOL * marinadeApy / 100) / 52,
+          status: 'active',
+          color: '#818cf8',
+        });
+      }
+    }
   }
 
-  const [jitoApy, marinadeApy] = await Promise.all([
-    fetchJitoApy(),
-    fetchMarinadeApy(),
-  ]);
+  // Parse native stake accounts
+  if (stakeRes.ok) {
+    const stakeData = await stakeRes.json() as {
+      result: { account: { data: { parsed: { info: { stake?: { delegation?: { stake: string }; meta?: { authorized: unknown } }; type?: string } } } }; pubkey: string }[];
+    };
+
+    let nativeStaked = 0;
+    for (const acc of stakeData.result ?? []) {
+      const info = acc.account?.data?.parsed?.info;
+      const stake = info?.stake?.delegation?.stake;
+      if (stake) {
+        nativeStaked += parseInt(stake, 10) / 1e9;
+      }
+    }
+
+    if (nativeStaked > 0) {
+      positions.push({
+        protocol: 'native',
+        label: 'Native Stake',
+        asset: 'SOL',
+        staked: nativeStaked,
+        tokenAmount: nativeStaked,
+        apy: nativeApy,
+        rewards7d: (nativeStaked * nativeApy / 100) / 52,
+        status: 'active',
+        color: '#34d399',
+      });
+    }
+  }
+
+  return positions;
+}
+
+// ─── GET Handler ──────────────────────────────────────────────────────────────
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const wallet = searchParams.get('wallet')?.trim();
+
+  const [jitoApy, marinadeApy] = await Promise.all([fetchJitoApy(), fetchMarinadeApy()]);
 
   const finalJitoApy = jitoApy ?? 7.52;
   const finalMarinadeApy = marinadeApy ?? 7.18;
-  const nativeApy = 6.8;
+  const nativeApy = 6.8; // Solana inflation-based estimate
 
-  // Demo staking positions — real amounts from connected wallet would populate these
-  const positions: StakingPosition[] = [
-    {
-      protocol: 'jito',
-      label: 'Jito Liquid Staking',
-      asset: 'jitoSOL',
-      staked: 12.45,
-      tokenAmount: 11.98,
-      apy: finalJitoApy,
-      rewards7d: 0.0166,
-      status: 'active',
-      color: '#38bdf8',
-    },
-    {
-      protocol: 'marinade',
-      label: 'Marinade Finance',
-      asset: 'mSOL',
-      staked: 5.20,
-      tokenAmount: 4.89,
-      apy: finalMarinadeApy,
-      rewards7d: 0.0072,
-      status: 'active',
-      color: '#818cf8',
-    },
-    {
-      protocol: 'native',
-      label: 'Native Stake',
-      asset: 'SOL',
-      staked: 3.0,
-      tokenAmount: 3.0,
-      apy: nativeApy,
-      rewards7d: 0.0039,
-      status: 'active',
-      color: '#34d399',
-    },
-  ];
+  const apySource: 'live' | 'fallback' = jitoApy !== null || marinadeApy !== null ? 'live' : 'fallback';
 
-  const totalStaked = positions.reduce((sum, p) => sum + p.staked, 0);
-  const totalRewards7d = positions.reduce((sum, p) => sum + p.rewards7d, 0);
+  if (!wallet) {
+    // No wallet — return APY rates only, no fake positions
+    return NextResponse.json({
+      positions: [],
+      totalStaked: 0,
+      totalRewards7d: 0,
+      jitoApy: finalJitoApy,
+      marinadeApy: finalMarinadeApy,
+      nativeApy,
+      source: apySource,
+      requiresWallet: true,
+    } satisfies StakingData);
+  }
 
-  const data: StakingData = {
-    positions,
-    totalStaked,
-    totalRewards7d,
-    jitoApy: finalJitoApy,
-    marinadeApy: finalMarinadeApy,
-    nativeApy,
-    source: jitoApy !== null || marinadeApy !== null ? 'live' : 'fallback',
-  };
+  try {
+    const positions = await fetchWalletPositions(wallet, finalJitoApy, finalMarinadeApy, nativeApy);
+    const totalStaked = positions.reduce((s, p) => s + p.staked, 0);
+    const totalRewards7d = positions.reduce((s, p) => s + p.rewards7d, 0);
 
-  _cache = { data, ts: Date.now() };
-  return NextResponse.json(data);
+    return NextResponse.json({
+      positions,
+      totalStaked,
+      totalRewards7d,
+      jitoApy: finalJitoApy,
+      marinadeApy: finalMarinadeApy,
+      nativeApy,
+      source: apySource,
+      requiresWallet: false,
+    } satisfies StakingData);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to fetch staking positions' },
+      { status: 500 },
+    );
+  }
 }
