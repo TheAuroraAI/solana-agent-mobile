@@ -113,7 +113,7 @@ export function BottomNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl border-t border-gray-700/50 animate-[fadeUp_0.2s_ease-out]"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-gray-900 rounded-t-3xl border-t border-gray-700/50 animate-[fadeUp_0.2s_ease-out] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle bar */}
@@ -131,7 +131,7 @@ export function BottomNav() {
             </button>
 
             {/* Menu items */}
-            <div className="px-4 pb-8 space-y-1">
+            <div className="px-4 pb-8 space-y-1 overflow-y-auto flex-1 overscroll-contain">
               {moreNav.map(({ href, label, icon: Icon, desc }) => {
                 const isActive = pathname.startsWith(href);
                 return (
