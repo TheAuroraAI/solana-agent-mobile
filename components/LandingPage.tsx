@@ -143,8 +143,8 @@ export function LandingPage() {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 mb-8">
         {[
-          { value: '33+', label: 'Features' },
-          { value: '23', label: 'API Routes' },
+          { value: '40+', label: 'Features' },
+          { value: '36', label: 'API Routes' },
           { value: '0→∞', label: 'Revenue' },
         ].map(({ value, label }) => (
           <div key={label} className="text-center p-3 rounded-xl bg-gray-900/40 border border-gray-800/40">
