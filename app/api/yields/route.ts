@@ -14,9 +14,9 @@ interface YieldRate {
 const FALLBACK_RATES: YieldRate[] = [
   { protocol: 'Jito', strategy: 'Liquid Staking', asset: 'SOL → jitoSOL', apy: 7.5, tvl: '$2.1B', risk: 'low', type: 'staking', description: 'Stake SOL, receive jitoSOL. Earn staking rewards + MEV tips. Fully liquid.', source: 'fallback' },
   { protocol: 'Marinade', strategy: 'Liquid Staking', asset: 'SOL → mSOL', apy: 7.2, tvl: '$1.4B', risk: 'low', type: 'staking', description: 'Delegate SOL across 400+ validators for decentralized staking yield.', source: 'fallback' },
-  { protocol: 'Kamino', strategy: 'USDC Lending', asset: 'USDC', apy: 11.3, tvl: '$890M', risk: 'medium', type: 'lending', description: 'Lend USDC to borrowers on Kamino. Variable rate, auto-compounds.', source: 'fallback' },
-  { protocol: 'Jupiter', strategy: 'JLP Vault', asset: 'SOL/USDC/ETH', apy: 28.4, tvl: '$650M', risk: 'high', type: 'lp', description: 'Provide liquidity to Jupiter perpetuals trading. High yield from trading fees.', source: 'fallback' },
-  { protocol: 'Drift', strategy: 'USDC Vault', asset: 'USDC', apy: 14.7, tvl: '$420M', risk: 'medium', type: 'lending', description: 'Deposit USDC into Drift lending market. Auto-compounds hourly.', source: 'fallback' },
+  { protocol: 'Kamino', strategy: 'USDC Lending', asset: 'USDC', apy: 1.3, tvl: '$890M', risk: 'medium', type: 'lending', description: 'Lend USDC to borrowers on Kamino. Variable rate, auto-compounds.', source: 'fallback' },
+  { protocol: 'Jupiter', strategy: 'JLP Vault', asset: 'SOL/USDC/ETH', apy: 9.3, tvl: '$650M', risk: 'high', type: 'lp', description: 'Provide liquidity to Jupiter perpetuals trading. High yield from trading fees.', source: 'fallback' },
+  { protocol: 'Drift', strategy: 'USDC Vault', asset: 'USDC', apy: 8.5, tvl: '$420M', risk: 'medium', type: 'lending', description: 'Deposit USDC into Drift lending market. Auto-compounds hourly.', source: 'fallback' },
 ];
 
 let _yieldCache: { rates: YieldRate[]; ts: number } | null = null;
