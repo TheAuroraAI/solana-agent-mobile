@@ -90,16 +90,24 @@ git clone https://github.com/TheAuroraAI/solana-agent-mobile
 cd solana-agent-mobile
 npm install
 cp .env.example .env.local
-# Add your Anthropic API key to .env.local
+# No API key required — Groq is the default AI provider (free)
 npm run dev
 ```
 
 ### Environment Variables
 
 ```env
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# AI Provider — Groq is default and free (no key required)
+GROQ_API_KEY=your_groq_api_key          # optional: get free key at console.groq.com
+
+# BYOK — bring your own Claude key for premium AI quality
+ANTHROPIC_API_KEY=your_anthropic_api_key  # optional: claude.ai/settings → API Keys
+
+# Solana network
 NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 ```
+
+> **No API key required to run.** The app uses Groq's free inference tier by default (Llama 3.3 70B). Add an `ANTHROPIC_API_KEY` to unlock Claude Sonnet 4.6 for higher-quality AI responses.
 
 ## Demo Flow
 
