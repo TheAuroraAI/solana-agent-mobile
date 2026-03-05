@@ -45,16 +45,35 @@ export function SwapWidget() {
       const route = data.routePlan?.map((r: { swapInfo: { label: string } }) => r.swapInfo?.label || '').filter(Boolean).join(' → ') || 'Direct';
       setQuote({ outAmount, priceImpact, route });
     } catch {
-      setError('Quote unavailable — live rate requires connection');
-      // Fallback estimate
+      // Try live prices from server as fallback
+      try {
+        const priceRes = await fetch('/api/prices');
+        if (priceRes.ok) {
+          const priceData = await priceRes.json();
+          // Normalize keys to lowercase for case-insensitive lookup (jitoSOL vs JitoSOL)
+          const normalizedPrices: Record<string, number> = {};
+          for (const [sym, val] of Object.entries(priceData.prices ?? {})) {
+            normalizedPrices[sym.toLowerCase()] = (val as { usd: number }).usd;
+          }
+          const fromPrice = normalizedPrices[fromToken.symbol.toLowerCase()];
+          const toPrice = normalizedPrices[toToken.symbol.toLowerCase()];
+          if (fromPrice && toPrice && toPrice > 0) {
+            setQuote({ outAmount: amountNum * (fromPrice / toPrice), priceImpact: 0.1, route: 'Price estimate' });
+            return;
+          }
+        }
+      } catch { /* fall through to static */ }
+
+      // Static fallback (updated March 2026, SOL ~$91, JitoSOL ~$115)
       const rates: Record<string, Record<string, number>> = {
-        SOL: { USDC: 153.5, USDT: 153.2, JitoSOL: 0.989, JUP: 245.6, BONK: 3_400_000 },
-        USDC: { SOL: 0.00652, JitoSOL: 0.00644, JUP: 1.6, BONK: 22_150 },
+        SOL: { USDC: 91, USDT: 90.9, JitoSOL: 0.790, JUP: 478, BONK: 15_200_000 },
+        USDC: { SOL: 0.011, JitoSOL: 0.0087, JUP: 5.26, BONK: 167_000 },
       };
       const rate = rates[fromToken.symbol]?.[toToken.symbol];
       if (rate) {
         setQuote({ outAmount: amountNum * rate, priceImpact: 0.01, route: 'Estimated (offline)' });
-        setError(null);
+      } else {
+        setError('Quote unavailable — live rate requires connection');
       }
     } finally {
       setLoading(false);

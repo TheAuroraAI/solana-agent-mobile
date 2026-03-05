@@ -36,6 +36,11 @@ async function fetchJitoApy(): Promise<number | null> {
     const res = await fetchWithTimeout('https://kobe.mainnet.jito.network/api/v1/stake_pool_stats', 8000);
     if (!res.ok) return null;
     const data = await res.json();
+    // API returns apy as array of {data: number, date: string}
+    if (Array.isArray(data?.apy) && data.apy.length > 0) {
+      const latest = data.apy[data.apy.length - 1];
+      if (typeof latest?.data === 'number') return latest.data * 100;
+    }
     if (typeof data?.apy === 'number') return data.apy * 100;
     return null;
   } catch { return null; }
