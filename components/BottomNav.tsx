@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -28,6 +28,8 @@ const moreNav = [
   { href: '/gas', label: 'Gas Station', icon: Fuel, desc: 'Real-time priority fees & network congestion' },
   { href: '/dca', label: 'DCA Scheduler', icon: Repeat, desc: 'Dollar-cost average into any Solana token' },
   { href: '/alerts', label: 'Alerts', icon: Bell, desc: 'Price alerts, whale moves & custom notifications' },
+  { href: '/sentiment', label: 'Social Pulse', icon: Heart, desc: 'Social sentiment & Fear/Greed index' },
+  { href: '/governance', label: 'Governance', icon: Vote, desc: 'DAO proposals & on-chain voting' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
