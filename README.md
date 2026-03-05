@@ -119,7 +119,7 @@ NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta  # or devnet
 ## Architecture
 
 ```
-Browser (Mobile PWA — 21 pages)
+Browser (Mobile PWA — 39 pages)
 ├── Landing → Wallet Connect (Phantom) or Demo Mode
 ├── Dashboard → Portfolio + 7d Chart + AI Briefing + 24h P&L + Health Score + Insight
 │   └── Share Card → "Share My Report" exports SVG/PNG portfolio card (Web Share API)
