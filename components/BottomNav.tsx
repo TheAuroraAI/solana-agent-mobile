@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords, Receipt, ScanSearch } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -37,6 +37,8 @@ const moreNav = [
   { href: '/copy', label: 'Copy Trading', icon: Copy, desc: 'Mirror top Solana traders automatically' },
   { href: '/screener', label: 'Screener', icon: SlidersHorizontal, desc: 'Filter and sort tokens by any metric' },
   { href: '/mev', label: 'MEV Shield', icon: Swords, desc: 'Protect trades from sandwich attacks' },
+  { href: '/tax', label: 'Tax Report', icon: Receipt, desc: '2025 crypto tax summary and export' },
+  { href: '/inspect', label: 'Wallet Inspector', icon: ScanSearch, desc: 'Deep-dive analytics on any Solana address' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
