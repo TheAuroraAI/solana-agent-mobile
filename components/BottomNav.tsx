@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords, Receipt, ScanSearch, FlaskConical, DollarSign, Rocket, Newspaper } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords, Receipt, ScanSearch, FlaskConical, DollarSign, Rocket, Newspaper, Server, Gauge, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
   { href: '/dashboard', label: 'Wallet', icon: Home },
   { href: '/chat', label: 'Agent', icon: MessageSquare },
+  { href: '/plan', label: 'Plan', icon: Sparkles },
   { href: '/actions', label: 'Actions', icon: Zap },
-  { href: '/yield', label: 'Yield', icon: TrendingUp },
 ];
 
 const moreNav = [
+  { href: '/yield', label: 'Yield Board', icon: TrendingUp, desc: 'DeFi yield rates + SKR Guardian Staking' },
   { href: '/search', label: 'Token Search', icon: Search, desc: 'Search 1,000+ verified Solana tokens' },
   { href: '/trending', label: 'Trending', icon: Flame, desc: 'Top Solana gainers & volume leaders' },
   { href: '/history', label: 'Tx History', icon: Clock, desc: 'On-chain transaction history + analytics' },
@@ -43,6 +44,8 @@ const moreNav = [
   { href: '/defi', label: 'DeFi Rates', icon: DollarSign, desc: 'Best lending & borrowing rates across Solana protocols' },
   { href: '/launches', label: 'Token Launches', icon: Rocket, desc: 'Upcoming IDOs, fair launches, and token calendar' },
   { href: '/news', label: 'News Feed', icon: Newspaper, desc: 'Curated Solana ecosystem news and protocol updates' },
+  { href: '/validators', label: 'Validators', icon: Server, desc: 'Compare validators by APY, commission, and uptime' },
+  { href: '/fees', label: 'Fee Optimizer', icon: Gauge, desc: 'Real-time priority fees, tiers & savings calculator' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
