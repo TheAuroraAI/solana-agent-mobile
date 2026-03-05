@@ -477,6 +477,63 @@ const ALL_TOKENS: ScreenerToken[] = [
   },
 ];
 
+// ─── Live price fetching ───────────────────────────────────────────────────────
+
+const SCREENER_MINTS: Record<string, string> = {
+  JUP: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+  RAY: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
+  ORCA: 'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE',
+  PYTH: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3',
+  JTO: 'jtojtomepa8bduhxRhALFzXqHTp5sXQFEQnSmk1tHBnP',
+  MNDE: 'MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey',
+  RENDER: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
+  HNT: 'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux',
+  DRIFT: 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7',
+  KMNO: 'KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS',
+};
+
+interface DexPair {
+  baseToken?: { address?: string };
+  priceUsd?: string;
+  priceChange?: { h24?: number };
+}
+
+async function fetchScreenerPrices(): Promise<Record<string, { usd: number; change24h: number }>> {
+  try {
+    const mints = Object.values(SCREENER_MINTS).join(',');
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(
+      `https://api.dexscreener.com/tokens/v1/solana/${mints}`,
+      { signal: controller.signal, headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return {};
+    const pairs = await res.json() as DexPair[];
+    const mintMap: Record<string, { usd: number; change24h: number }> = {};
+    for (const pair of pairs) {
+      const mint = pair.baseToken?.address;
+      if (mint && !mintMap[mint] && parseFloat(pair.priceUsd ?? '0') > 0) {
+        mintMap[mint] = {
+          usd: parseFloat(pair.priceUsd!),
+          change24h: pair.priceChange?.h24 ?? 0,
+        };
+      }
+    }
+    // Convert mint addresses back to symbols
+    const result: Record<string, { usd: number; change24h: number }> = {};
+    for (const [symbol, mint] of Object.entries(SCREENER_MINTS)) {
+      if (mintMap[mint]) result[symbol] = mintMap[mint];
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+
 function applyFilters(
   tokens: ScreenerToken[],
   category: string,
@@ -518,6 +575,8 @@ function applyFilters(
   return result;
 }
 
+// ─── GET ──────────────────────────────────────────────────────────────────────
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const sort = (searchParams.get('sort') ?? 'marketCap') as SortField;
@@ -526,11 +585,30 @@ export async function GET(request: NextRequest) {
   const minMcap = Number(searchParams.get('minMcap') ?? '0');
   const maxMcap = Number(searchParams.get('maxMcap') ?? '0');
 
-  const tokens = applyFilters(ALL_TOKENS, category, minMcap, maxMcap, sort, dir);
+  // Try to get live prices
+  const livePrices = await fetchScreenerPrices();
+
+  // Merge live prices into token list
+  const tokens = ALL_TOKENS.map((t) => {
+    const live = livePrices[t.symbol];
+    if (live && live.usd > 0) {
+      const priceRatio = live.usd / t.price;
+      return {
+        ...t,
+        price: live.usd,
+        change24h: live.change24h,
+        marketCap: Math.round(t.marketCap * priceRatio),
+        fdv: Math.round(t.fdv * priceRatio),
+      };
+    }
+    return t;
+  });
+
+  const filtered = applyFilters(tokens, category, minMcap, maxMcap, sort, dir);
 
   const data: ScreenerData = {
-    tokens,
-    totalCount: tokens.length,
+    tokens: filtered,
+    totalCount: filtered.length,
     lastUpdated: new Date().toISOString(),
   };
 
