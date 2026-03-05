@@ -89,7 +89,7 @@ export function LandingPage() {
           Aurora Agent
         </h1>
         <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
-          Your autonomous AI wallet for Solana. 33+ features including SKR Guardian staking — built for Seeker.
+          Your autonomous AI wallet for Solana. 40+ features including SKR Guardian staking, DeFi rates, token launches &amp; news — built for Seeker.
         </p>
         {/* Live SOL price */}
         {solPrice != null && solPrice > 0 && isFinite(solPrice) && (

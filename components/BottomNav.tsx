@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords, Receipt, ScanSearch, FlaskConical } from 'lucide-react';
+import { Home, MessageSquare, Zap, Activity, Calendar, TrendingUp, Settings, MoreHorizontal, Shield, X, Store, Clock, Flame, Search, Image, Link as LinkIcon, Scale, Crosshair, Layers, BookOpen, Fuel, Repeat, Bell, Heart, Vote, Gift, BarChart2, ArrowLeftRight, ListOrdered, Copy, SlidersHorizontal, Swords, Receipt, ScanSearch, FlaskConical, DollarSign, Rocket, Newspaper } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const primaryNav = [
@@ -40,6 +40,9 @@ const moreNav = [
   { href: '/tax', label: 'Tax Report', icon: Receipt, desc: '2025 crypto tax summary and export' },
   { href: '/inspect', label: 'Wallet Inspector', icon: ScanSearch, desc: 'Deep-dive analytics on any Solana address' },
   { href: '/simulator', label: 'Portfolio Sim', icon: FlaskConical, desc: 'Simulate bull/bear scenarios on your portfolio' },
+  { href: '/defi', label: 'DeFi Rates', icon: DollarSign, desc: 'Best lending & borrowing rates across Solana protocols' },
+  { href: '/launches', label: 'Token Launches', icon: Rocket, desc: 'Upcoming IDOs, fair launches, and token calendar' },
+  { href: '/news', label: 'News Feed', icon: Newspaper, desc: 'Curated Solana ecosystem news and protocol updates' },
   { href: '/whales', label: 'Whale Watch', icon: Activity, desc: 'Track large transactions' },
   { href: '/unlocks', label: 'Token Unlocks', icon: Calendar, desc: 'Upcoming vesting events' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Network, model & preferences' },
