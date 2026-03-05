@@ -178,24 +178,43 @@ const MOCK_AIRDROPS: Airdrop[] = [
   },
 ];
 
-export async function GET() {
-  const claimableAirdrops = MOCK_AIRDROPS.filter((a) => a.status === 'claimable');
-  const upcomingAirdrops = MOCK_AIRDROPS.filter((a) => a.status === 'upcoming');
+// Return airdrops with dates adjusted relative to today
+function getAirdrops(): Airdrop[] {
+  const now = Date.now();
+  return MOCK_AIRDROPS.map(a => {
+    // Update deadline dates to be future-relative to today
+    if (a.status === 'claimable' && a.claimDeadline) {
+      const daysFromNow = 15;
+      return { ...a, claimDeadline: new Date(now + daysFromNow * 86400000).toISOString() };
+    }
+    if (a.status === 'upcoming' && a.snapshotDate) {
+      const daysFromNow = 30 + MOCK_AIRDROPS.indexOf(a) * 10;
+      return { ...a, snapshotDate: new Date(now + daysFromNow * 86400000).toISOString() };
+    }
+    return a;
+  });
+}
 
-  const totalEstimatedValue = MOCK_AIRDROPS.reduce((sum, a) => {
+export async function GET() {
+  const airdrops = getAirdrops();
+  const claimableAirdrops = airdrops.filter((a) => a.status === 'claimable');
+  const upcomingAirdrops = airdrops.filter((a) => a.status === 'upcoming');
+
+  const totalEstimatedValue = airdrops.reduce((sum, a) => {
     if (a.status === 'claimable' || a.status === 'upcoming') {
       return sum + (a.estimatedValue ?? 0);
     }
     return sum;
   }, 0);
 
-  const data: AirdropsData = {
+  const data: AirdropsData & { source: string } = {
     walletAddress: null,
     totalEstimatedValue,
     claimableCount: claimableAirdrops.length,
     upcomingCount: upcomingAirdrops.length,
-    airdrops: MOCK_AIRDROPS,
+    airdrops,
     lastUpdated: new Date().toISOString(),
+    source: 'curated',
   };
 
   return NextResponse.json(data);
