@@ -282,14 +282,17 @@ export function DefiView() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12_000);
     try {
-      const res = await fetch('/api/defi');
+      const res = await fetch('/api/defi', { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as DefiRatesData;
       setData(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load DeFi rates');
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, []);

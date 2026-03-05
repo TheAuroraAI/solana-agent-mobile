@@ -153,33 +153,107 @@ function computeBestRates(protocols: DefiProtocol[]): { bestSupply: BestRate; be
   return { bestSupply, bestBorrow };
 }
 
+// ─── Fallback Data ────────────────────────────────────────────────────────────
+
+const FALLBACK_PROTOCOLS: DefiProtocol[] = [
+  {
+    id: 'kamino',
+    name: 'Kamino',
+    logo: '🌀',
+    tvl: '$1.2B',
+    type: 'lending',
+    tokens: [
+      { symbol: 'USDC', supplyApy: 1.30, borrowApy: 2.60, utilization: 72, liquidity: '$420M' },
+      { symbol: 'SOL',  supplyApy: 4.50, borrowApy: 7.20, utilization: 68, liquidity: '$380M' },
+      { symbol: 'USDT', supplyApy: 1.10, borrowApy: 2.40, utilization: 65, liquidity: '$180M' },
+    ],
+  },
+  {
+    id: 'marginfi',
+    name: 'Marginfi',
+    logo: '🏦',
+    tvl: '$890M',
+    type: 'lending',
+    tokens: [
+      { symbol: 'USDC', supplyApy: 1.80, borrowApy: 3.10, utilization: 75, liquidity: '$310M' },
+      { symbol: 'SOL',  supplyApy: 5.20, borrowApy: 8.10, utilization: 70, liquidity: '$290M' },
+      { symbol: 'ETH',  supplyApy: 2.10, borrowApy: 3.80, utilization: 62, liquidity: '$95M'  },
+    ],
+  },
+  {
+    id: 'jupiter',
+    name: 'Jupiter Lend',
+    logo: '♃',
+    tvl: '$551M',
+    type: 'lending',
+    tokens: [
+      { symbol: 'USDC', supplyApy: 4.20, borrowApy: 6.50, utilization: 80, liquidity: '$320M' },
+      { symbol: 'SOL',  supplyApy: 5.80, borrowApy: 9.10, utilization: 74, liquidity: '$180M' },
+    ],
+  },
+  {
+    id: 'drift',
+    name: 'Drift',
+    logo: '🌊',
+    tvl: '$340M',
+    type: 'yield',
+    tokens: [
+      { symbol: 'SOL',  supplyApy: 5.80, borrowApy: 0,    utilization: 100, liquidity: '$340M' },
+      { symbol: 'USDC', supplyApy: 2.40, borrowApy: 4.20, utilization: 68,  liquidity: '$85M'  },
+    ],
+  },
+  {
+    id: 'save',
+    name: 'Save',
+    logo: '💾',
+    tvl: '$210M',
+    type: 'lending',
+    tokens: [
+      { symbol: 'USDC', supplyApy: 1.60, borrowApy: 2.90, utilization: 70, liquidity: '$120M' },
+      { symbol: 'SOL',  supplyApy: 3.80, borrowApy: 6.10, utilization: 65, liquidity: '$75M'  },
+    ],
+  },
+];
+
 // ─── GET Handler ──────────────────────────────────────────────────────────────
 
 export async function GET() {
   try {
-    const protocols = await fetchDefiLlamaPools();
+    const protocols = await Promise.race([
+      fetchDefiLlamaPools(),
+      new Promise<DefiProtocol[]>((_, reject) =>
+        setTimeout(() => reject(new Error('DefiLlama timeout')), 10_000),
+      ),
+    ]);
 
-    if (protocols.length === 0) throw new Error('No Solana pools returned');
+    const live = protocols.length > 0 ? protocols : FALLBACK_PROTOCOLS;
+    const source: 'live' | 'estimated' = protocols.length > 0 ? 'live' : 'estimated';
 
-    const { bestSupply, bestBorrow } = computeBestRates(protocols);
-    const totalTvlRaw = protocols.reduce((s, p) => {
+    const { bestSupply, bestBorrow } = computeBestRates(live);
+    const totalTvlRaw = live.reduce((s, p) => {
       const n = parseFloat(p.tvl.replace(/[$BMK]/g, ''));
       const mult = p.tvl.endsWith('B') ? 1e9 : p.tvl.endsWith('M') ? 1e6 : 1e3;
       return s + n * mult;
     }, 0);
 
     return NextResponse.json({
-      protocols,
+      protocols: live,
       bestSupply,
       bestBorrow,
       totalTvl: fmtTvl(totalTvlRaw),
       lastUpdated: new Date().toISOString(),
-      source: 'live',
+      source,
     } satisfies DefiRatesData);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to load DeFi rates' },
-      { status: 500 },
-    );
+  } catch {
+    // Final fallback — always return 200
+    const { bestSupply, bestBorrow } = computeBestRates(FALLBACK_PROTOCOLS);
+    return NextResponse.json({
+      protocols: FALLBACK_PROTOCOLS,
+      bestSupply,
+      bestBorrow,
+      totalTvl: '$3.2B',
+      lastUpdated: new Date().toISOString(),
+      source: 'estimated',
+    } satisfies DefiRatesData);
   }
 }
