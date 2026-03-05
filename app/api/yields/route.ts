@@ -16,7 +16,7 @@ const FALLBACK_RATES: YieldRate[] = [
   { protocol: 'Marinade', strategy: 'Liquid Staking', asset: 'SOL → mSOL', apy: 7.2, tvl: '$1.4B', risk: 'low', type: 'staking', description: 'Delegate SOL across 400+ validators for decentralized staking yield.', source: 'fallback' },
   { protocol: 'Kamino', strategy: 'USDC Lending', asset: 'USDC', apy: 1.3, tvl: '$890M', risk: 'medium', type: 'lending', description: 'Lend USDC to borrowers on Kamino. Variable rate, auto-compounds.', source: 'fallback' },
   { protocol: 'Jupiter', strategy: 'JLP Vault', asset: 'SOL/USDC/ETH', apy: 9.3, tvl: '$650M', risk: 'high', type: 'lp', description: 'Provide liquidity to Jupiter perpetuals trading. High yield from trading fees.', source: 'fallback' },
-  { protocol: 'Drift', strategy: 'Liquid Staking', asset: 'SOL → dSOL', apy: 6.2, tvl: '$228M', risk: 'low', type: 'staking', description: 'Stake SOL via Drift to earn native staking yield. Liquid dSOL token redeemable 1:1.', source: 'fallback' },
+  { protocol: 'Jupiter Lend', strategy: 'USDC Lending', asset: 'USDC', apy: 4.0, tvl: '$551M', risk: 'medium', type: 'lending', description: 'Lend USDC on Jupiter Lend. Largest USDC lending pool on Solana. Variable rate, auto-compounds.', source: 'fallback' },
 ];
 
 let _yieldCache: { rates: YieldRate[]; ts: number } | null = null;
@@ -102,11 +102,11 @@ async function fetchJupiterJlpApy(): Promise<number | null> {
   }
 }
 
-// Drift dSOL staking APY via DeFiLlama chart (pool 296651fc)
-async function fetchDriftDsolApy(): Promise<number | null> {
+// Jupiter Lend USDC APY via DeFiLlama chart (pool d783c8df)
+async function fetchJupiterLendUsdcApy(): Promise<number | null> {
   try {
     const res = await fetchWithTimeout(
-      'https://yields.llama.fi/chart/296651fc-25f6-4434-b8ec-17c2af9808da',
+      'https://yields.llama.fi/chart/d783c8df-e2ed-44b4-8317-161ccc1b5f06',
       10000
     );
     if (!res.ok) return null;
@@ -135,12 +135,12 @@ export async function GET() {
   }
 
   // Fetch live rates in parallel
-  const [jitoApy, marinadeApy, kaminoUsdcApy, jupiterJlpApy, driftDsolApy] = await Promise.all([
+  const [jitoApy, marinadeApy, kaminoUsdcApy, jupiterJlpApy, jupiterLendUsdcApy] = await Promise.all([
     fetchJitoApy(),
     fetchMarinadeApy(),
     fetchKaminoUsdcApy(),
     fetchJupiterJlpApy(),
-    fetchDriftDsolApy(),
+    fetchJupiterLendUsdcApy(),
   ]);
 
   const rates: YieldRate[] = FALLBACK_RATES.map(rate => {
@@ -161,8 +161,8 @@ export async function GET() {
       updated.apy = jupiterJlpApy;
       updated.source = 'live';
     }
-    if (rate.protocol === 'Drift' && driftDsolApy !== null) {
-      updated.apy = driftDsolApy;
+    if (rate.protocol === 'Jupiter Lend' && jupiterLendUsdcApy !== null) {
+      updated.apy = jupiterLendUsdcApy;
       updated.source = 'live';
     }
     return updated;
