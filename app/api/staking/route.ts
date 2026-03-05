@@ -45,7 +45,7 @@ async function fetchJitoApy(): Promise<number | null> {
 
 async function fetchMarinadeApy(): Promise<number | null> {
   try {
-    const res = await fetchWithTimeout('https://api.marinade.finance/msol/apy/latest', 8000);
+    const res = await fetchWithTimeout('https://api.marinade.finance/msol/apy/1y', 8000);
     if (!res.ok) return null;
     const data = await res.json();
     if (typeof data?.value === 'number') return data.value * 100;

@@ -60,159 +60,73 @@ async function fetchMarinadeApy(): Promise<number | null> {
   }
 }
 
-// Kamino USDC lending rate via their public market API
-const KAMINO_USDC_RESERVE = 'D6q6wuQSriffjP5J1bNR6DHK5SH7pLDuukMv6ByNGi4';
+// Kamino USDC lending rate via DeFiLlama (pool d2141a59)
 async function fetchKaminoUsdcApy(): Promise<number | null> {
   try {
     const res = await fetchWithTimeout(
-      `https://api.kamino.finance/reserve-market-stats?env=mainnet-beta&start=0&end=0&frequency=1h&pubkey=${KAMINO_USDC_RESERVE}`,
+      'https://yields.llama.fi/chart/d2141a59-c199-4be7-8d4b-c8223954836b',
       10000
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const apy =
-      data?.supplyInterestAPY ??
-      data?.data?.[0]?.supplyInterestAPY ??
-      data?.stats?.supplyInterestAPY;
-    if (typeof apy === 'number') return parseFloat((apy * 100).toFixed(1));
+    const entries: { apy?: number }[] = data?.data ?? [];
+    if (entries.length > 0) {
+      const latest = entries[entries.length - 1];
+      if (typeof latest?.apy === 'number') return parseFloat(latest.apy.toFixed(1));
+    }
     return null;
   } catch {
     return null;
   }
 }
 
+// Jupiter JLP APY via DeFiLlama (pool cf41a15b)
 async function fetchJupiterJlpApy(): Promise<number | null> {
-  // Primary: Jupiter perpetuals pool stats API
-  try {
-    const res = await fetchWithTimeout('https://api.jup.ag/perpetuals/v1/pool-stats', 10000);
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        // Try various field names the API may return
-        const apy =
-          data?.feeApr ??
-          data?.totalApr ??
-          data?.apy ??
-          data?.apr ??
-          data?.poolStats?.feeApr ??
-          data?.poolStats?.totalApr ??
-          data?.stats?.feeApr ??
-          data?.stats?.totalApr;
-        if (typeof apy === 'number' && apy > 0) {
-          // Value may be a decimal fraction (0.285) or already a percentage (28.5)
-          const pct = apy < 2 ? parseFloat((apy * 100).toFixed(1)) : parseFloat(apy.toFixed(1));
-          return pct;
-        }
-      } catch {
-        // JSON parse failed, fall through to secondary
-      }
-    }
-  } catch {
-    // fetch failed, fall through to secondary
-  }
-
-  // Secondary: CoinGecko pool data for JLP
   try {
     const res = await fetchWithTimeout(
-      'https://api.coingecko.com/api/v3/pools/solana/JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
+      'https://yields.llama.fi/chart/cf41a15b-eb6a-46de-bc2b-cf4d0a58569c',
       10000
     );
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        const apy =
-          data?.data?.attributes?.apr ??
-          data?.data?.attributes?.apy ??
-          data?.attributes?.apr ??
-          data?.attributes?.apy;
-        if (typeof apy === 'number' && apy > 0) {
-          const pct = apy < 2 ? parseFloat((apy * 100).toFixed(1)) : parseFloat(apy.toFixed(1));
-          return pct;
-        }
-        // CoinGecko sometimes returns string percentages
-        if (typeof apy === 'string') {
-          const parsed = parseFloat(apy);
-          if (!isNaN(parsed) && parsed > 0) {
-            return parsed < 2 ? parseFloat((parsed * 100).toFixed(1)) : parseFloat(parsed.toFixed(1));
-          }
-        }
-      } catch {
-        // JSON parse failed
+    if (!res.ok) return null;
+    const data = await res.json();
+    const entries: { apy?: number }[] = data?.data ?? [];
+    if (entries.length > 0) {
+      const latest = entries[entries.length - 1];
+      if (typeof latest?.apy === 'number' && latest.apy > 0) {
+        return parseFloat(latest.apy.toFixed(1));
       }
     }
+    return null;
   } catch {
-    // fetch failed
+    return null;
   }
-
-  return null;
 }
 
+// Drift USDC vault APY via DeFiLlama pools (filter for drift solana USDC)
 async function fetchDriftUsdcApy(): Promise<number | null> {
-  // Primary: Drift mainnet APY endpoint
   try {
-    const res = await fetchWithTimeout('https://mainnet-beta.api.drift.trade/apys', 10000);
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        // Drift returns an object keyed by market name or index; look for USDC
-        const usdcApy =
-          data?.USDC?.supplyApy ??
-          data?.USDC?.apy ??
-          data?.usdc?.supplyApy ??
-          data?.usdc?.apy ??
-          data?.['USDC-SPOT']?.supplyApy ??
-          data?.['USDC-SPOT']?.apy ??
-          (Array.isArray(data)
-            ? (data.find((m: Record<string, unknown>) =>
-                typeof m.symbol === 'string' && m.symbol.toUpperCase() === 'USDC'
-              ) as Record<string, unknown> | undefined)?.supplyApy ?? null
-            : null);
-        if (typeof usdcApy === 'number' && usdcApy > 0) {
-          // Value may be fractional (0.147) or percentage (14.7)
-          const pct = usdcApy < 2 ? parseFloat((usdcApy * 100).toFixed(1)) : parseFloat(usdcApy.toFixed(1));
-          return pct;
-        }
-      } catch {
-        // JSON parse failed, fall through
-      }
-    }
-  } catch {
-    // fetch failed, fall through
-  }
-
-  // Secondary: Drift historical S3 data
-  try {
-    const res = await fetchWithTimeout(
-      'https://drift-historical-data.s3.eu-west-1.amazonaws.com/spot-market-stats/latest.json',
-      10000
+    const res = await fetchWithTimeout('https://yields.llama.fi/pools', 10000);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pools: { project?: string; symbol?: string; chain?: string; apy?: number; tvlUsd?: number }[] =
+      data?.data ?? [];
+    // Find Drift USDC lending pool on Solana with meaningful TVL
+    const driftUsdc = pools.find(
+      (p) =>
+        p.chain?.toLowerCase() === 'solana' &&
+        p.project?.toLowerCase().includes('drift') &&
+        p.symbol?.toUpperCase().includes('USDC') &&
+        typeof p.apy === 'number' &&
+        p.apy > 0 &&
+        (p.tvlUsd ?? 0) > 1e6
     );
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        // S3 data may be an array of market objects
-        const markets: Record<string, unknown>[] = Array.isArray(data) ? data : (data?.markets ?? []);
-        const usdcMarket = markets.find(
-          (m: Record<string, unknown>) =>
-            (typeof m.symbol === 'string' && m.symbol.toUpperCase() === 'USDC') ||
-            m.marketIndex === 0
-        );
-        const apy =
-          (usdcMarket?.depositApy as number | undefined) ??
-          (usdcMarket?.supplyApy as number | undefined) ??
-          (usdcMarket?.apy as number | undefined);
-        if (typeof apy === 'number' && apy > 0) {
-          const pct = apy < 2 ? parseFloat((apy * 100).toFixed(1)) : parseFloat(apy.toFixed(1));
-          return pct;
-        }
-      } catch {
-        // JSON parse failed
-      }
+    if (driftUsdc && typeof driftUsdc.apy === 'number') {
+      return parseFloat(driftUsdc.apy.toFixed(1));
     }
+    return null;
   } catch {
-    // fetch failed
+    return null;
   }
-
-  return null;
 }
 
 export async function GET() {
